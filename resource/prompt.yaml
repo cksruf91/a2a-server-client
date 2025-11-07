@@ -5,7 +5,14 @@ mcp:
     system:
     user:
 a2a:
-  client:
-    system:
-  server:
-    system:
+  host:
+    system: "
+당신은 사용자 정보와 상품 정보를 찾는 것을 도와주는 에이전트 입니다. 다음의 agent 를 사용하여 사용자의 질문에 답변하세요
+<AgentCards>
+{agent_card}
+</AgentCards>
+
+<instruction>
+markdown 포멧을 활용하여 답변하세요
+</instruction>
+"

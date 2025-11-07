@@ -11,9 +11,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from strands import Agent
+from strands.agent.conversation_manager import SlidingWindowConversationManager
 from strands.models.openai import OpenAIModel
 from strands.types.content import Message, ContentBlock
 from strands_tools.a2a_client import A2AClientToolProvider
+
+from prompt_manager import PromptManager
 
 
 class ChattingRequest(BaseModel):
@@ -35,31 +38,40 @@ class ChatResponse(BaseModel):
 class OrcastratorAgent:
     AGENT_URLS = [
         'http://localhost:9101',
-        'http://localhost:9102'
+        'http://localhost:9102',
     ]
+    prompt = PromptManager()
 
     def __init__(self):
         self.provider = A2AClientToolProvider(known_agent_urls=self.AGENT_URLS)
-        model = OpenAIModel(
+        self.conversation_manager = SlidingWindowConversationManager(
+            window_size=10,
+        )
+        self.model = OpenAIModel(
             model_id="gpt-4o-mini",
             params={
                 "temperature": 0.1,
             }
         )
-        self.agent = Agent(
-            model=model,
-            tools=self.provider.tools,
-            system_prompt="You are a helpful assistant."
-        )
 
     async def invoke(self, a2a_message: A2aMessage) -> str:
+        cards = [
+            c.model_dump_json() for c in await self.get_agent_cards()
+        ]
+        sys_prompt = self.prompt.host_system.format(agent_card=cards)
+        agent = Agent(
+            model=self.model,
+            tools=self.provider.tools,
+            system_prompt=sys_prompt
+        )
+
         message = Message(role='user', content=[])
         for part in a2a_message.parts:
             if part.root.kind == "text":
                 message['content'].append(
                     ContentBlock(text=part.root.text)
                 )
-        result = self.agent([message])
+        result = agent([message])
         # Access metrics through the AgentResult
         print(f"Total tokens: {result.metrics.accumulated_usage['totalTokens']}")
         print(f"Execution time: {sum(result.metrics.cycle_durations):.2f} seconds")
@@ -67,7 +79,28 @@ class OrcastratorAgent:
         return result.message['content'][0]['text']
 
     async def complete(self, request: ChattingRequest) -> str:
-        result = self.agent(request.question)
+        cards = [
+            c.model_dump_json() for c in await self.get_agent_cards()
+        ]
+        sys_prompt = self.prompt.host_system.format(agent_card=cards)
+        agent = Agent(
+            model=self.model,
+            tools=self.provider.tools,
+            system_prompt=sys_prompt
+        )
+
+        messages = []
+        for conversation in request.history:
+            messages.append(
+                {"role": conversation[0], "content": [{"text": conversation[1]}]}
+            )
+        messages.append({"role": "user", "content": [{"text": request.question}]})
+
+        result = agent(
+            messages,
+            conversation_manager=self.conversation_manager,
+        )
+
         # Access metrics through the AgentResult
         print(f"Total tokens: {result.metrics.accumulated_usage['totalTokens']}")
         print(f"Execution time: {sum(result.metrics.cycle_durations):.2f} seconds")
