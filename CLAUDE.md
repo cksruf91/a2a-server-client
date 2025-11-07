@@ -12,7 +12,7 @@ The project consists of three layers:
 
 1. **MCP Servers**: Provide domain-specific tools (user/product information)
 2. **A2A Agents**: Specialized agents that use MCP tools to handle specific domains
-3. **Web Application**: FastAPI app with OrcastratorAgent (host agent) and chat UI for user interaction
+3. **Web Application**: FastAPI app with StrandsHostAgent (host agent) and chat UI for user interaction
 
 ## Development Environment
 
@@ -28,12 +28,17 @@ The project consists of three layers:
 - `strands-agents-tools[a2a-client]`: A2A client tool provider for orchestration
 - `fastapi` + `uvicorn`: Web framework and ASGI server
 - `openai`: LLM integration (GPT-4o-mini)
+- `google-adk`: Google Agent Development Kit
+- `nest-asyncio`: Nested asyncio support for compatibility
 
 ## Project Structure
 
 ```
 a2a-server-client/
-├── app.py                          # FastAPI web app with OrcastratorAgent (host agent)
+├── app.py                          # FastAPI web app (port 9201) - imports from host/
+├── prompt_manager.py               # Prompt management utility
+├── host/
+│   └── host_agent.py              # Host agent using strands-agents (port 9202 standalone)
 ├── mcp/
 │   ├── agent/
 │   │   ├── user_agent.py          # User information agent (port 9101)
@@ -42,6 +47,7 @@ a2a-server-client/
 │       ├── user_mcp_server.py     # User info MCP server (port 9011)
 │       └── prod_mcp_server.py     # Product info MCP server (port 9012)
 ├── resource/
+│   ├── prompt.yaml                # System prompts for agents (Korean)
 │   └── app/
 │       ├── index.html             # Chat UI frontend
 │       ├── app.js                 # Frontend JavaScript (API_BASE_URL: port 9201)
@@ -122,11 +128,21 @@ uv pip list
 - `user_agent.py`: Handles user-related queries using MCP user tools
 - `product_agent.py`: Handles product-related queries using MCP product tools
 
-### Orchestrator & Web Application
-- `app.py`: FastAPI-based app with OrcastratorAgent (host agent) and web UI
-  - OrcastratorAgent orchestrates multiple A2A agents
-  - Built with Strands framework and A2AClientToolProvider
+### Host Agent & Web Application
+
+- `host/host_agent.py`: StrandsHostAgent implementation
+  - Orchestrates multiple A2A agents using strands-agents framework
+  - Uses A2AClientToolProvider for agent communication
+  - Provides both complete and streaming chat endpoints
+  - Loads system prompts from `resource/prompt.yaml`
+  - Can run standalone on port 9202 or via app.py
+
+- `app.py`: FastAPI-based web application
+  - Imports and uses StrandsHostAgent from `host/host_agent.py`
+  - Exposes REST API endpoints: `/chat/complete` and `/chat/stream`
   - Serves static frontend files from `resource/app/`
+  - Mounts A2A application for protocol compliance
+  - Runs on port 9201 (matches frontend configuration)
 
 ### Frontend
 - Single-page application with chat interface
@@ -137,7 +153,8 @@ uv pip list
 
 | Component | Port | Description |
 |-----------|------|-------------|
-| Web App (FastAPI) | 9201 | OrcastratorAgent (host) with UI |
+| Web App (FastAPI) | 9201 | StrandsHostAgent with UI (via app.py) |
+| Host Agent (Standalone) | 9202 | StrandsHostAgent standalone (host/host_agent.py) |
 | User Agent (A2A) | 9101 | User information agent |
 | Product Agent (A2A) | 9102 | Product information agent |
 | User MCP Server | 9011 | User info tools |
@@ -150,6 +167,9 @@ uv pip list
 - Agents communicate via A2A protocol
 - Tools are provided via MCP (Model Context Protocol)
 - CORS is enabled for frontend-backend communication
+- System prompts are defined in `resource/prompt.yaml` (Korean language)
+- Frontend supports both normal (complete) and streaming chat modes
+- Chat sessions are persisted in browser localStorage
 
 ## Instruction
 - Update this file if any change in code or project structure

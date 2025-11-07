@@ -1,6 +1,7 @@
 const API_BASE_URL = 'http://localhost:9201';
 const COMPLETE_ENDPOINT = '/chat/complete';
 const STREAM_ENDPOINT = '/chat/stream'
+const INIT_MESSAGE = 'Hello! I\'m your AI assistant How can i help you!'
 let currentMode = 'normal';
 let roomId = 'test-room-' + Date.now();
 let chatHistory = []; // Store chat history as [["user", "message"], ["assistant", "response"]]
@@ -110,7 +111,7 @@ function startNewChat() {
     container.innerHTML = `
         <div class="message assistant">
             <div class="message-bubble">
-                Hello! I'm your MCP assistant with Plan-and-Execute capabilities!
+                ${INIT_MESSAGE}
             </div>
             <div class="message-time">Just now</div>
         </div>
@@ -435,7 +436,7 @@ async function sendStreamMessage(text) {
                             if (data.message) {
                                 // Add status message styling for non-stream events
                                 bubble.classList.add('status-message');
-                                bubble.textContent = `[${currentEvent || 'working'}] ${data.message}`;
+                                bubble.textContent = `[working] ${data.message}`;
                                 console.log('Status message:', data.message);
                             }
                         }
@@ -525,7 +526,7 @@ function resetChat() {
     container.innerHTML = `
         <div class="message assistant">
             <div class="message-bubble">
-                Hello! I'm your MCP assistant with Plan-and-Execute capabilities!
+                ${INIT_MESSAGE}
             </div>
             <div class="message-time">Just now</div>
         </div>
