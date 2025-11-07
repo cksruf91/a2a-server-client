@@ -4,7 +4,7 @@ from pathlib import Path
 import nest_asyncio
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from host.host_agent import StrandsHostAgent, ChatResponse, ChattingRequest, a2a_application_emitter
@@ -17,6 +17,15 @@ chat_router = APIRouter(prefix='/chat', tags=['chat'])
 async def get_chatting_message(request: ChattingRequest) -> ChatResponse:
     output = await StrandsHostAgent().complete(request)
     return ChatResponse(roomId=request.roomId, message=output)
+
+
+@chat_router.post('/stream')
+async def get_chatting_stream_message(request: ChattingRequest) -> StreamingResponse:
+    print('stream')
+    return StreamingResponse(
+        StrandsHostAgent().stream(request),
+        media_type="text/event-stream"
+    )
 
 
 def main():

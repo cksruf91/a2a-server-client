@@ -1,6 +1,8 @@
 import asyncio
+import json
 import uuid
 from pathlib import Path
+from typing import AsyncIterable
 from typing import Literal
 
 import httpx
@@ -16,6 +18,7 @@ from a2a.types import AgentSkill, AgentCard, AgentCapabilities
 from a2a.types import Message as A2aMessage
 from a2a.utils import new_agent_text_message
 from pydantic import BaseModel, Field
+from sse_starlette.sse import ServerSentEvent
 from strands import Agent
 from strands.agent.conversation_manager import SlidingWindowConversationManager
 from strands.models.openai import OpenAIModel
@@ -87,16 +90,6 @@ class StrandsHostAgent:
         return result.message['content'][0]['text']
 
     async def complete(self, request: ChattingRequest) -> str:
-        cards = [
-            c.model_dump_json() for c in await self.get_agent_cards()
-        ]
-        sys_prompt = self.host_system_prompt.format(agent_card=cards)
-        agent = Agent(
-            model=self.model,
-            tools=self.provider.tools,
-            system_prompt=sys_prompt
-        )
-
         messages = []
         for conversation in request.history:
             messages.append(
@@ -104,9 +97,18 @@ class StrandsHostAgent:
             )
         messages.append({"role": "user", "content": [{"text": request.question}]})
 
+        cards = [
+            c.model_dump_json() for c in await self.get_agent_cards()
+        ]
+        sys_prompt = self.host_system_prompt.format(agent_card=cards)
+        agent = Agent(
+            model=self.model,
+            tools=self.provider.tools,
+            system_prompt=sys_prompt,
+        )
+
         result = agent(
-            messages,
-            conversation_manager=self.conversation_manager,
+            messages, conversation_manager=self.conversation_manager,
         )
 
         # Access metrics through the AgentResult
@@ -114,6 +116,45 @@ class StrandsHostAgent:
         print(f"Execution time: {sum(result.metrics.cycle_durations):.2f} seconds")
         print(f"Tools used: {list(result.metrics.tool_metrics.keys())}")
         return result.message['content'][0]['text']
+
+    async def stream(self, request: ChattingRequest) -> AsyncIterable[bytes]:
+        messages = []
+        for conversation in request.history:
+            messages.append(
+                {"role": conversation[0], "content": [{"text": conversation[1]}]}
+            )
+        messages.append({"role": "user", "content": [{"text": request.question}]})
+
+        cards = [
+            c.model_dump_json() for c in await self.get_agent_cards()
+        ]
+        sys_prompt = self.host_system_prompt.format(agent_card=cards)
+        agent = Agent(
+            model=self.model,
+            tools=self.provider.tools,
+            system_prompt=sys_prompt,
+        )
+        async for event in agent.stream_async(messages):
+            if 'current_tool_use' in event:
+                yield ServerSentEvent(
+                    event='executing',
+                    data=json.dumps({
+                        'message': "ask agent..", 'contents': None
+                    })
+                ).encode()
+            elif "data" in event:
+                yield ServerSentEvent(
+                    event='stream',
+                    data=json.dumps({
+                        'message': 'in progress', 'contents': event["data"]
+                    })
+                ).encode()
+        yield ServerSentEvent(
+            event='Done',
+            data=json.dumps({
+                'message': 'Done', 'contents': ""
+            })
+        ).encode()
 
     async def get_agent_cards(self) -> list[AgentCard]:
         cards: list[AgentCard] = []
