@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from host.host_agent import StrandsHostAgent, ChatResponse, ChattingRequest, a2a_application_emitter
+from host.host_agent import StrandsHostAgent, ChatResponse, ChattingRequest, get_a2a_application
 
 nest_asyncio.apply()
 chat_router = APIRouter(prefix='/chat', tags=['chat'])
@@ -52,7 +52,7 @@ def main():
     async def serve_frontend():
         return FileResponse(static_file_path.joinpath("index.html"))
 
-    a2a_app = asyncio.run(a2a_application_emitter())
-    app.mount('/', a2a_app.build())
+    a2a_starlette_app = asyncio.run(get_a2a_application())
+    app.mount('/', a2a_starlette_app.build())
 
     return app

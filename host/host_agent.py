@@ -178,6 +178,8 @@ class HostAgentExecutor(AgentExecutor):
             context: RequestContext,
             event_queue: EventQueue,
     ) -> None:
+        if context.message is None:
+            raise RuntimeError('No message')
         result = await self.agent.invoke(context.message)
         await event_queue.enqueue_event(new_agent_text_message(result))
 
@@ -187,7 +189,7 @@ class HostAgentExecutor(AgentExecutor):
         raise Exception('cancel not supported')
 
 
-async def a2a_application_emitter() -> A2AStarletteApplication:
+async def get_a2a_application() -> A2AStarletteApplication:
     host_agent = StrandsHostAgent()
     agent_skills: list[AgentSkill] = []
     for cards in await host_agent.get_agent_cards():
@@ -218,5 +220,5 @@ async def a2a_application_emitter() -> A2AStarletteApplication:
 
 
 if __name__ == '__main__':
-    app = asyncio.run(a2a_application_emitter())
+    app = asyncio.run(get_a2a_application())
     uvicorn.run(app.build(), host='0.0.0.0', port=9202)
