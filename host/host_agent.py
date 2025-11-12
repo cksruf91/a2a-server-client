@@ -65,7 +65,9 @@ class StrandsHostAgent:
             }
         )
 
-    async def invoke(self, a2a_message: A2aMessage) -> str:
+    async def invoke(self, a2a_message: A2aMessage | None) -> str:
+        if a2a_message is None:
+            return "no message"
         cards = [
             c.model_dump_json() for c in await self.get_agent_cards()
         ]
@@ -181,7 +183,13 @@ class HostAgentExecutor(AgentExecutor):
         if context.message is None:
             raise RuntimeError('No message')
         result = await self.agent.invoke(context.message)
-        await event_queue.enqueue_event(new_agent_text_message(result))
+        await event_queue.enqueue_event(
+            new_agent_text_message(
+                result,
+                context_id=context.context_id,
+                task_id=context.task_id,
+            )
+        )
 
     async def cancel(
             self, context: RequestContext, event_queue: EventQueue

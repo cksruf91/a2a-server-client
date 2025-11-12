@@ -12,10 +12,6 @@ from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 
-AGENT_URLS = [
-    'http://localhost:9101',
-    'http://localhost:9102'
-]
 REMOTE_AGENTS: list[RemoteA2aAgent] = [
     RemoteA2aAgent(
         name="user_agent",
