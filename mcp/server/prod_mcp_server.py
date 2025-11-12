@@ -1,10 +1,11 @@
+import logging
 from typing import List
 
 from fastmcp import FastMCP, Context
 from fastmcp.tools.tool import ToolResult, TextContent
 
 mcp = FastMCP(
-    name="MCP server Beta 🚀",
+    name="Product Manager MCP server🚀",
     instructions="""
         This server provides travel package information services including package details like name, price and description.
     """,
@@ -39,6 +40,12 @@ PROD_INFO = {
 }
 
 
+class ContextMocker(Context):
+    def __init__(self):
+        super().__init__(mcp)
+        self.logger = logging.getLogger('ContextMocker')
+
+
 @mcp.tool(
     tags={'prod'},
     meta={'author': 'anonymous'},
@@ -55,6 +62,8 @@ async def get_product_info(product_code: List[str], ctx: Context = None) -> Tool
     Returns:
         ToolResult: Product information including name, price and description for requested product codes
     """
+    if ctx is None:
+        ctx: ContextMocker = ContextMocker()
     await ctx.info('get_product_info tool invoked')
     result = {}
     for code in product_code:

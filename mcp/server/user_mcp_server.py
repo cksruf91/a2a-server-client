@@ -1,3 +1,5 @@
+import logging
+
 from fastmcp import FastMCP, Context
 from fastmcp.tools.tool import ToolResult, TextContent
 
@@ -7,6 +9,12 @@ mcp = FastMCP(
         This server provides user information services.
     """,
 )
+
+
+class ContextMocker(Context):
+    def __init__(self):
+        super().__init__(mcp)
+        self.logger = logging.getLogger('ContextMocker')
 
 
 @mcp.tool(
@@ -23,13 +31,15 @@ async def get_user_name(user_id: str, ctx: Context = None) -> ToolResult:
 
     Args:
         user_id (str): The ID of the user to look up
-        ctx : internal use only, ignore this parameter
+        ctx (Context, optional): internal use only, ignore this parameter
 
     Returns:
         ToolResult: Result object containing:
             - Text content with the user's name
             - Structured content with the name result
     """
+    if ctx is None:
+        ctx: ContextMocker = ContextMocker()
     await ctx.info('get_user_name tool invoked')
     nams_space = {
         'M4386': 'D.B.Cooper'
@@ -56,13 +66,15 @@ async def get_user_address(user_id: str, ctx: Context = None) -> ToolResult:
 
     Args:
         user_id (str): The ID of the user to look up
-        ctx : internal use only, ignore this parameter
+        ctx (Context, optional): internal use only, ignore this parameter
 
     Returns:
         ToolResult: Result object containing:
             - Text content with the user's address
             - Structured content with the address result
     """
+    if ctx is None:
+        ctx: ContextMocker = ContextMocker()
     await ctx.info('get_user_address tool invoked')
     nams_space = {
         'M4386': 'Seattle Tacoma International Airport'
@@ -89,13 +101,15 @@ async def get_user_booked_item(user_id: str, ctx: Context = None) -> ToolResult:
 
     Args:
         user_id (str): The ID of the user to look up
-        ctx : internal use only, ignore this parameter
+        ctx (Context, optional): internal use only, ignore this parameter
 
     Returns:
         ToolResult: Result object containing:
             - Text content with the list of items booked by the user
             - Structured content with the booked items result
     """
+    if ctx is None:
+        ctx: ContextMocker = ContextMocker()
     await ctx.info('get_user_booked_item tool invoked')
     nams_space = {
         'M4386': ["BALI004", "TOKYO002"]
