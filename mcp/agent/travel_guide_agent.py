@@ -1,10 +1,9 @@
-import json
-import re
+import uuid
 from collections.abc import AsyncIterable
-from typing import Any
 
 import nest_asyncio
 import uvicorn
+from a2a.server.agent_execution import RequestContext
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
@@ -16,26 +15,31 @@ from a2a.types import (
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.planners import BuiltInPlanner
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
 from google.adk.tools.mcp_tool import StreamableHTTPConnectionParams, McpToolset
 from google.genai import types
 from google.genai.types import ThinkingConfig
 
-from common.google.agent_runner import AgentRunner
+from common.google.abstract_agent import AbstractAgent
 from common.google.executor import GenericAgentExecutor
 from common.google.tool import ToolFilter
+from common.google.types import AgentResponse
 
 nest_asyncio.apply()
 
 
-class TravelGuideAgent:
+class TravelGuideAgent(AbstractAgent):
     """Travel Guide Agent."""
 
     def __init__(self):
+        super().__init__()
         self.agent = None
-        self.runner = None
+        self.runner: Runner | None = None
         self.agent_name = 'TravelGuideAgent'
+        self.session_service = InMemorySessionService()
 
-    async def init_agent(self):
+    async def init_agent_runner(self):
         tools = await McpToolset(
             connection_params=StreamableHTTPConnectionParams(
                 url="http://localhost:9013/mcp", timeout=2.0
@@ -48,7 +52,7 @@ class TravelGuideAgent:
 
         self.agent = Agent(
             model=LiteLlm(model="openai/gpt-4o-mini"),
-            name="TravelGuideAgent",
+            name=self.agent_name,
             instruction="as a travel guide assistant, you provide information about specific locations or recommendations.",
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
@@ -63,90 +67,79 @@ class TravelGuideAgent:
                 )
             ),
         )
-        print(f'Initializing {self.agent_name} metadata')
-        self.runner = AgentRunner()
-
-    async def stream(self, query, context_id, task_id) -> AsyncIterable[dict[str, Any]]:
-        print(
-            f'Running agent stream for session {context_id} {task_id} - {query}'
+        print(f'Initializing {self.agent_name}')
+        self.runner = Runner(
+            agent=self.agent,
+            app_name=self.agent_name,
+            session_service=self.session_service,
         )
 
+    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
+        query = context.get_user_input()
+
+        print('Running agent stream for session {context_id} {task_id} - {query}'.format(
+            context_id=context.current_task.context_id,
+            task_id=context.current_task.id,
+            query=query,
+        ))
         if not query:
             raise ValueError('Query cannot be empty')
 
-        if not self.agent:
-            await self.init_agent()
-        async for chunk in self.runner.run_stream(
-                self.agent, query, context_id
+        if not self.runner:
+            await self.init_agent_runner()
+
+        user_id = context.metadata.get('user_id', uuid.uuid4().hex)
+        session_id = await self.manage_session(user_id=user_id, session_id=context.current_task.context_id)
+
+        content = types.Content(role='user', parts=[types.Part(text=query)])
+        async for event in self.runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
+                new_message=content,
         ):
-            print(f'Received chunk {chunk}')
-            if isinstance(chunk, dict) and chunk.get('type') == 'final_result':
-                response = chunk['response']
-                yield self.get_agent_response(response)
+
+            if not event.is_final_response():
+                yield AgentResponse(
+                    response_type=None,
+                    is_task_complete=False,
+                    require_user_input=False,
+                    content=f"{event.content}: Processing response...",
+                )
             else:
-                yield {
-                    'is_task_complete': False,
-                    'require_user_input': False,
-                    'content': f'{self.agent_name}: Processing Request...',
-                }
+                response = ""
+                if event.content and event.content.parts:
+                    for part in event.content.parts:
+                        if part.text:
+                            response += part.text + "\n"
+                        elif part.function_response:
+                            response += part.function_response.model_dump_json() + "\n"
+                else:
+                    response += f"Error for running agent {self.agent_name}"
+                # TODO : user input required case
+                yield AgentResponse(
+                    response_type="text",
+                    is_task_complete=True,
+                    require_user_input=False,
+                    content=response,
+                )
 
-    def format_response(self, chunk):
-        patterns = [
-            r'```\n(.*?)\n```',
-            r'```json\s*(.*?)\s*```',
-            r'```tool_outputs\s*(.*?)\s*```',
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, chunk, re.DOTALL)
-            if match:
-                content = match.group(1)
-                try:
-                    return json.loads(content)
-                except json.JSONDecodeError:
-                    return content
-        return chunk
-
-    def get_agent_response(self, chunk):
-        print(f'Response Type {type(chunk)}')
-        data = self.format_response(chunk)
-        print(f'Formatted Response {data}')
-        try:
-            if isinstance(data, dict):
-                if 'status' in data and data['status'] == 'input_required':
-                    return {
-                        'response_type': 'text',
-                        'is_task_complete': False,
-                        'require_user_input': True,
-                        'content': data['question'],
-                    }
-                return {
-                    'response_type': 'data',
-                    'is_task_complete': True,
-                    'require_user_input': False,
-                    'content': data,
-                }
-            return_type = 'data'
-            try:
-                data = json.loads(data)
-                return_type = 'data'
-            except Exception as json_e:
-                print(f'Json conversion error {json_e}')
-                return_type = 'text'
-            return {
-                'response_type': return_type,
-                'is_task_complete': True,
-                'require_user_input': False,
-                'content': data,
-            }
-        except Exception as e:
-            print(f'Error in get_agent_response: {e}')
-            return {
-                'response_type': 'text',
-                'is_task_complete': True,
-                'require_user_input': False,
-                'content': 'Could not complete booking / task. Please try again.',
-            }
+    async def manage_session(self, user_id: str, session_id: str | None) -> str:
+        session = None
+        if session_id:
+            session_id = uuid.uuid4().hex
+        else:
+            session = await self.session_service.get_session(
+                app_name=self.agent_name,
+                user_id=user_id,
+                session_id=session_id,
+            )
+        if not session:
+            _ = await self.session_service.create_session(
+                app_name=self.agent_name,
+                user_id=user_id,
+                session_id=session_id,
+            )
+        return session_id
 
 
 if __name__ == "__main__":

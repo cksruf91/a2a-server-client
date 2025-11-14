@@ -3,66 +3,52 @@ from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
 from a2a.types import (
     DataPart,
-    InvalidParamsError,
-    SendStreamingMessageSuccessResponse,
     Task,
-    TaskArtifactUpdateEvent,
     TaskState,
-    TaskStatusUpdateEvent,
     TextPart,
     UnsupportedOperationError,
 )
 from a2a.utils import new_agent_text_message, new_task
 from a2a.utils.errors import ServerError
-from common.google.agent_runner import AgentRunner
+
+from common.google.abstract_agent import AbstractAgent
+from common.google.types import AgentResponse
 
 
 class GenericAgentExecutor(AgentExecutor):
     """AgentExecutor used by the travel agents."""
 
-    def __init__(self, agent: AgentRunner):
+    def __init__(self, agent: AbstractAgent):
         self.agent = agent
 
-    async def execute(
-            self,
-            context: RequestContext,
-            event_queue: EventQueue,
-    ) -> None:
+    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         print(f'Executing agent, {self.agent.agent_name}')
-        error = self._validate_request(context)
-        if error:
-            raise ServerError(error=InvalidParamsError())
-        print(context.metadata)
-        query = context.get_user_input()
-
         task = context.current_task
-
         if not task:
             task = new_task(context.message)
             await event_queue.enqueue_event(task)
+            context.current_task = task
 
         updater = TaskUpdater(event_queue, task.id, task.context_id)
 
-        async for item in self.agent.stream(query, task.context_id, task.id):
-            if hasattr(item, 'root') and isinstance(
-                    item.root, SendStreamingMessageSuccessResponse
-            ):
-                event = item.root.result
-                if isinstance(
-                        event,
-                        (TaskStatusUpdateEvent | TaskArtifactUpdateEvent),
-                ):
-                    await event_queue.enqueue_event(event)
-                continue
+        async for item in self.agent.stream(context):
+            item: AgentResponse
+            # if hasattr(item, 'root') and isinstance(
+            #         item.root, SendStreamingMessageSuccessResponse
+            # ):
+            #     event = item.root.result
+            #     if isinstance(
+            #             event,
+            #             (TaskStatusUpdateEvent | TaskArtifactUpdateEvent),
+            #     ):
+            #         await event_queue.enqueue_event(event)
+            #     continue
 
-            is_task_complete = item['is_task_complete']
-            require_user_input = item['require_user_input']
-
-            if is_task_complete:
-                if item['response_type'] == 'data':
-                    part = DataPart(data=item['content'])
+            if item.is_task_complete:
+                if item.response_type == 'data':
+                    part = DataPart(data=item.content)
                 else:
-                    part = TextPart(text=item['content'])
+                    part = TextPart(text=item.content)
 
                 await updater.add_artifact(
                     [part],
@@ -70,11 +56,11 @@ class GenericAgentExecutor(AgentExecutor):
                 )
                 await updater.complete()
                 break
-            if require_user_input:
+            if item.require_user_input:
                 await updater.update_status(
                     TaskState.input_required,
                     new_agent_text_message(
-                        item['content'],
+                        item.content,
                         task.context_id,
                         task.id,
                     ),
@@ -84,14 +70,11 @@ class GenericAgentExecutor(AgentExecutor):
             await updater.update_status(
                 TaskState.working,
                 new_agent_text_message(
-                    item['content'],
+                    item.content,
                     task.context_id,
                     task.id,
                 ),
             )
-
-    def _validate_request(self, context: RequestContext) -> bool:
-        return False
 
     async def cancel(
             self, request: RequestContext, event_queue: EventQueue
