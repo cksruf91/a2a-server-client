@@ -51,31 +51,60 @@ class ContextMocker(Context):
 )
 async def get_place_recommendation(
         city_or_country_name: str,
+        theme: str = None,
         ctx: Context = None
 ) -> ToolResult:
-    """Retrieves place recommendations for a specified city or country.
-    
-    The tool uses the provided name of a city or country to generate a list of 
-    recommended tourist attractions nearby by leveraging grounding with Google Maps.
-    
+    """Retrieves place recommendations for a specified city or country with optional theme filtering.
+
+    The tool uses the provided name of a city or country to generate a list of
+    recommended places nearby by leveraging grounding with Google Maps. You can optionally
+    specify a theme to get recommendations for specific types of places.
+
     Args:
-        city_or_country_name (str): The name of the city or country for which tourist
-            attractions are to be recommended.
+        city_or_country_name (str): The name of the city or country for which places
+            are to be recommended.
+        theme (str, optional): The type of places to recommend. Common themes include:
+            - "맛집" or "restaurant": Recommend restaurants and dining spots
+            - "관광" or "tourist": Recommend tourist attractions and sightseeing spots
+            - "카페" or "cafe": Recommend cafes and coffee shops
+            - "쇼핑" or "shopping": Recommend shopping areas and markets
+            - "자연" or "nature": Recommend parks and natural attractions
+            If not provided, general tourist attractions will be recommended.
         ctx (Context, optional): internal use only, ignore this parameter
-    
+
     Returns:
-        the generated tour place recommendation text.
+        the generated place recommendation text based on the specified theme.
     """
     if ctx is None:
         ctx = ContextMocker()
     await ctx.info(
         'get_place_recommendation tool invoked, '
-        'params(city_or_country_name={})'.format(city_or_country_name)
+        'params(city_or_country_name={}, theme={})'.format(city_or_country_name, theme)
     )
     gemini = MapGroundingAgent()
-    response = gemini.map_grounding(
-        instruction=f"Please recommend key tourist attractions near {city_or_country_name}"
-    )
+
+    # Build instruction based on theme
+    if theme:
+        # Map common Korean themes to English descriptions
+        theme_mapping = {
+            "맛집": "popular restaurants and dining spots",
+            "restaurant": "popular restaurants and dining spots",
+            "관광": "key tourist attractions and sightseeing spots",
+            "tourist": "key tourist attractions and sightseeing spots",
+            "카페": "popular cafes and coffee shops",
+            "cafe": "popular cafes and coffee shops",
+            "쇼핑": "shopping areas and markets",
+            "shopping": "shopping areas and markets",
+            "자연": "parks and natural attractions",
+            "nature": "parks and natural attractions",
+        }
+
+        place_type = theme_mapping.get(theme.lower(), f"{theme} places")
+        instruction = f"Please recommend {place_type} near {city_or_country_name}"
+    else:
+        instruction = f"Please recommend key tourist attractions near {city_or_country_name}"
+
+    response = gemini.map_grounding(instruction=instruction)
     return ToolResult(
         content=TextContent(
             type="text",
