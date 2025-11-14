@@ -16,12 +16,11 @@ from a2a.types import (
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.planners import BuiltInPlanner
-from google.adk.sessions import InMemorySessionService
 from google.adk.tools.mcp_tool import StreamableHTTPConnectionParams, McpToolset
 from google.genai import types
 from google.genai.types import ThinkingConfig
 
-from common.google.agent import AgentRunner
+from common.google.agent_runner import AgentRunner
 from common.google.executor import GenericAgentExecutor
 from common.google.tool import ToolFilter
 
@@ -33,7 +32,6 @@ class TravelGuideAgent:
 
     def __init__(self):
         self.agent = None
-        self.session_service = InMemorySessionService()
         self.runner = None
         self.agent_name = 'TravelGuideAgent'
 
