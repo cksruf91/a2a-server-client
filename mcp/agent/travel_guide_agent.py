@@ -13,6 +13,7 @@ from a2a.types import (
     AgentCapabilities,
 )
 from google.adk.agents import Agent
+from google.adk.events import Event
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.planners import BuiltInPlanner
 from google.adk.runners import Runner
@@ -74,6 +75,21 @@ class TravelGuideAgent(AbstractAgent):
             session_service=self.session_service,
         )
 
+    @staticmethod
+    def middle_event_logging(event: Event) -> None:
+        print("------[Event Log]------")
+        for part in event.content.parts:
+            if part.function_call:
+                print("{name}({args})".format(
+                    name=part.function_call.name, args=part.function_call.args))
+            elif part.function_response:
+                print("{name} response : {resp})".format(
+                    name=part.function_response.name, resp=part.function_response.response))
+            elif part.text:
+                print("{text}".format(text=part.text))
+            else:
+                print(event.model_dump_json())
+
     async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
         query = context.get_user_input()
 
@@ -97,6 +113,7 @@ class TravelGuideAgent(AbstractAgent):
                 session_id=session_id,
                 new_message=content,
         ):
+            self.middle_event_logging(event)
 
             if not event.is_final_response():
                 yield AgentResponse(
