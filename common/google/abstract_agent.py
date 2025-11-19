@@ -1,3 +1,5 @@
+import asyncio
+import datetime
 import uuid
 from abc import abstractmethod, ABCMeta
 from typing import AsyncIterable
@@ -23,7 +25,7 @@ class AbstractAgent(metaclass=ABCMeta):
     async def init_agent_runner(self):
         ...
 
-    async def stream(self, context: RequestContext, session: Session) -> AsyncIterable[AgentResponse]:
+    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
         query = context.get_user_input()
         # print("hist : ", context.current_task.history)
         print('Running agent stream for session {context_id} {task_id} - {query}'.format(
@@ -38,6 +40,7 @@ class AbstractAgent(metaclass=ABCMeta):
             await self.init_agent_runner()
 
         user_id = context.metadata.get('userId', uuid.uuid4().hex)
+        session = await self._manage_session(user_id=user_id, session_id=context.current_task.id)
 
         content = types.Content(role='user', parts=[types.Part(text=query)])
         async for event in self.runner.run_async(
@@ -83,3 +86,45 @@ class AbstractAgent(metaclass=ABCMeta):
                 print("{text}".format(text=part.text))
             else:
                 print(event.model_dump_json())
+
+    async def _get_or_create_session(self, user_id: str, session_id: str) -> Session:
+        session = None
+        if not session_id:
+            session_id = uuid.uuid4().hex
+        else:
+            session = await self.session_service.get_session(
+                app_name=self.agent_name,
+                user_id=user_id,
+                session_id=session_id,
+            )
+        if not session:
+            session = await self.session_service.create_session(
+                app_name=self.agent_name,
+                user_id=user_id,
+                session_id=session_id,
+            )
+            print(f"[Session Management] session created : {session.id}")
+        else:
+            print(f"[Session Management] session retrieved : {session.id}")
+        return session
+
+    async def _delete_expired_session(self) -> None:
+        session_list = await self.session_service.list_sessions(app_name=self.agent_name)
+        print("[Session Management] current session count : {}".format(len(session_list.sessions)))
+
+        delta_time = datetime.timedelta(seconds=2).total_seconds()
+        for _session in session_list.sessions:
+            if (_session.last_update_time + delta_time) < datetime.datetime.now().timestamp():
+                print("[Session Management] session expired, id(last_update_time): {}({})".format(
+                    _session.id, _session.last_update_time))
+                await self.session_service.delete_session(
+                    app_name=_session.app_name,
+                    user_id=_session.user_id,
+                    session_id=_session.id,
+                )
+
+    async def _manage_session(self, user_id: str, session_id: str | None) -> Session:
+        session = await self._get_or_create_session(user_id, session_id)
+        asyncio.create_task(self._delete_expired_session())
+        print(f"[Session Management] finished, session_id: {session.id}")
+        return session

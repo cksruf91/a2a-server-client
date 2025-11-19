@@ -34,7 +34,7 @@ class TravelGuideAgent(AbstractAgent):
         super().__init__()
         self.agent = None
         self.runner: Runner | None = None
-        self.agent_name = 'TravelGuideAgent'
+        self.agent_name = 'travel_guide_agent'
         self.session_service = InMemorySessionService()
 
     async def init_agent_runner(self):
@@ -51,10 +51,8 @@ class TravelGuideAgent(AbstractAgent):
         instruction = """
         as a travel guide assistant, you provide information about specific locations or recommendations.
 
-        If the user doesn't provide sufficient information to use the tool, ask for the necessary information.
-        
-        if you need more information from user set "require_user_input: true"
-
+        If the user doesn't provide sufficient information to use the tool, ask for the necessary information. 
+        don't ask Unnecessary information
         """
 
         self.agent = Agent(
@@ -84,7 +82,7 @@ class TravelGuideAgent(AbstractAgent):
 
 if __name__ == "__main__":
     public_agent_card = AgentCard(
-        name="travel guide agent",
+        name="travel_guide_agent",
         description="travel guide agent",
         url='http://localhost:9103/',
         version='1.0.0',
