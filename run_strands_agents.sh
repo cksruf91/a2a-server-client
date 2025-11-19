@@ -9,11 +9,11 @@ trap 'echo -e "\nShutting down all agents..."; kill $PID_BETA $PID_GAMMA 2>/dev/
 #PID_ALPHA=$!
 
 echo "Starting agent 1 (port 9101)..."
-uv run mcp/agent/user_agent.py &
+uv run strands_agents/user_agent.py &
 PID_BETA=$!
 
 echo "Starting agent 2 (port 9102)..."
-uv run mcp/agent/product_agent.py &
+uv run strands_agents/product_agent.py &
 PID_GAMMA=$!
 
 echo "all Agent are running. Press Ctrl+C to terminate."

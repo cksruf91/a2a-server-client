@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from host.host_agent import StrandsHostAgent, ChatResponse, ChattingRequest, get_a2a_application
+from strands_agents.host_agent import StrandsHostAgent, ChatResponse, ChattingRequest, get_a2a_application
 
 nest_asyncio.apply()
 chat_router = APIRouter(prefix='/chat', tags=['chat'])
