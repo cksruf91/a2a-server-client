@@ -1,4 +1,5 @@
 import uuid
+from typing import AsyncIterable
 
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,10 +27,10 @@ class TravelAssistantClient:
         agent_card = await self.broker.get_agent_card()
         return agent_card.model_dump()
 
-    async def stream_chat(self, request: ChattingRequest):
+    async def stream_chat(self, request: ChattingRequest) -> AsyncIterable[bytes]:
         """Stream chat responses from travel_assistant_agent"""
-        output = await self.broker.run(type_="stream", message=request.question)
-        return output
+        async for bytes_ in self.broker.stream(message=request.question):
+            yield bytes_
 
     async def close(self):
         """Close the HTTP client"""
@@ -45,7 +46,7 @@ async def chat_stream(request: ChattingRequest) -> StreamingResponse:
     """Stream chat responses from travel_assistant_agent"""
     travel_client = TravelAssistantClient()
     return StreamingResponse(
-        await travel_client.stream_chat(request),
+        travel_client.stream_chat(request),
         media_type="text/event-stream"
     )
 
