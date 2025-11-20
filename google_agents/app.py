@@ -47,7 +47,7 @@ async def chat_stream(request: ChattingRequest) -> StreamingResponse:
     travel_client = TravelAssistantClient()
     return StreamingResponse(
         travel_client.stream_chat(request),
-        media_type="text/event-stream"
+        media_type="text/event-stream; charset=utf-8"
     )
 
 

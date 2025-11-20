@@ -116,7 +116,8 @@ class AgentMessageBroker:
                 yield ServerSentEvent(
                     event='working',
                     data=json.dumps(
-                        {'message': 'response', 'contents': f"task({task.id}) - {task.status.state}"}
+                        {'message': 'response', 'contents': f"task({task.id}) - {task.status.state}"},
+                        ensure_ascii=False
                     )
                 ).encode()
 
@@ -132,11 +133,13 @@ class AgentMessageBroker:
             raise RuntimeError(f"failed to parse response, task: {task.model_dump_json(ensure_ascii=False)}")
 
         yield ServerSentEvent(
-            event='Done',
+            event='streaming',
             data=json.dumps(
-                {'message': 'response', 'contents': output}
+                {'message': 'response', 'contents': output},
+                ensure_ascii=False
             )
         ).encode()
+        yield ServerSentEvent(event="Done", data='.').encode()
 
     async def aclose(self) -> None:
         if self.httpx_client:
