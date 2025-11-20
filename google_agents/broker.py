@@ -1,10 +1,12 @@
+import json
 import uuid
-from typing import Literal, Callable
+from typing import Callable, AsyncIterable
 
 import httpx
 from a2a.client import A2ACardResolver, ClientFactory, ClientConfig, Client
 from a2a.types import TransportProtocol, Message, Role, Part, TextPart, Task, TaskStatusUpdateEvent, \
     TaskArtifactUpdateEvent, TaskQueryParams, AgentCard
+from sse_starlette.sse import ServerSentEvent
 
 
 def httpx_context(func: Callable):
@@ -17,6 +19,21 @@ def httpx_context(func: Callable):
         ) as httpx_client:
             kwargs['httpx_client'] = httpx_client
             return await func(*args, **kwargs)
+
+    return wrapper
+
+
+def stream_httpx_context(func: Callable):
+    async def wrapper(*args, **kwargs):
+        async with httpx.AsyncClient(
+                timeout=60,
+                headers={
+                    "Content-Type": "application/json",
+                }
+        ) as httpx_client:
+            kwargs['httpx_client'] = httpx_client
+            async for event in func(*args, **kwargs):
+                yield event
 
     return wrapper
 
@@ -51,18 +68,16 @@ class AgentMessageBroker:
         return await resolver.get_agent_card()
 
     @httpx_context
-    async def run(self, type_: Literal['stream', 'complete'], message: str, httpx_client: httpx.AsyncClient = None):
+    async def complete(self, message: str, httpx_client: httpx.AsyncClient = None) -> str:
+        # self.httpx_client = httpx_client
+        # self.client = await self._get_client(httpx_client)
+        raise NotImplementedError('complete is not implemented yet')
+
+    @stream_httpx_context
+    async def stream(self, message: str, httpx_client: httpx.AsyncClient = None) -> AsyncIterable[bytes]:
         self.httpx_client = httpx_client
         self.client = await self._get_client(httpx_client)
 
-        if type_ == 'stream':
-            return await self.stream(message)
-        elif type_ == 'complete':
-            raise NotImplementedError('complete is not implemented yet')
-        else:
-            raise ValueError(f'unknown type {type_}')
-
-    async def stream(self, message: str) -> str:
         m = Message(
             message_id=str(uuid.uuid4()),
             role=Role.user,
@@ -79,7 +94,12 @@ class AgentMessageBroker:
         async for task, event in self.client.send_message(m):
             print("-" * 50 + "[Event]" + "-" * 50)
             if task:
-                print(f"TaskID: {task.id}, Status: {task.status.state}")
+                yield ServerSentEvent(
+                    event='working',
+                    data=json.dumps(
+                        {'message': 'response', 'contents': f"task({task.id}) - {task.status.state}"}
+                    )
+                ).encode()
 
         if not task:
             raise RuntimeError(f"failed to get task, event: {event.model_dump_json(ensure_ascii=False)}")
@@ -88,9 +108,16 @@ class AgentMessageBroker:
         if hasattr(response, 'artifacts') and response.artifacts:
             for artifact in response.artifacts:
                 output = artifact.parts[0].root.text
+
         if not output:
             raise RuntimeError(f"failed to parse response, task: {task.model_dump_json(ensure_ascii=False)}")
-        return output
+
+        yield ServerSentEvent(
+            event='Done',
+            data=json.dumps(
+                {'message': 'response', 'contents': output}
+            )
+        ).encode()
 
     async def aclose(self) -> None:
         if self.httpx_client:
