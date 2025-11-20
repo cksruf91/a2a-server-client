@@ -115,7 +115,7 @@ if __name__ == "__main__":
                 description="Retrieves detailed information about a given landmark or place name.",
                 tags=["travel", 'guide'],
                 examples=[
-                    "콜로세움에 대해 설명해줘"
+                    "콜로세움에 대해 설명해줘",
                     "도톤보리는 어떤곳이야?"
                 ],
             ),
