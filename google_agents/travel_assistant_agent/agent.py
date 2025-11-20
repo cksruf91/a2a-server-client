@@ -19,7 +19,7 @@ travel_guide_agent = RemoteA2aAgent(
     name="travel_guide_agent",
     description="travel_guide_agent",
     agent_card=(
-        f"http://localhost:9103{AGENT_CARD_WELL_KNOWN_PATH}"
+        f"http://localhost:10001{AGENT_CARD_WELL_KNOWN_PATH}"
     ),
 )
 
@@ -27,7 +27,7 @@ travel_planner_agent = RemoteA2aAgent(
     name="travel_planner_agent",
     description="travel_planner_agent",
     agent_card=(
-        f"http://localhost:9104{AGENT_CARD_WELL_KNOWN_PATH}"
+        f"http://localhost:10002{AGENT_CARD_WELL_KNOWN_PATH}"
     ),
 )
 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     public_agent_card = AgentCard(
         name="travel assistant agent",
         description="travel assistant agent",
-        url='http://localhost:9202/',
+        url='http://localhost:10000/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -133,4 +133,4 @@ if __name__ == "__main__":
         http_handler=request_handler,
     )
 
-    uvicorn.run(server.build(), host='0.0.0.0', port=9202)
+    uvicorn.run(server.build(), host='0.0.0.0', port=10000)

@@ -11,8 +11,8 @@ echo "Starting server 2 (port 9012)..."
 fastmcp run mcp/server/prod_mcp_server.py --transport http --port 9012 &
 PID_BETA=$!
 
-echo "Starting server 2 (port 9013)..."
-fastmcp run mcp/server/travel_mcp_server.py --transport http --port 9013 &
+echo "Starting server 3 (port 5001)..."
+fastmcp run mcp/server/travel_mcp_server.py --transport http --port 5001 &
 PID_GAMMA=$!
 
 echo "Both servers are running. Press Ctrl+C to terminate."

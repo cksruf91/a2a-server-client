@@ -45,16 +45,16 @@ a2a-server-client/
 │   └── product_agent.py               # Product information agent (port 9102)
 ├── google_agents/
 │   ├── travel_guide_agent/
-│   │   └── agent.py                   # Travel guide agent (port 9103)
+│   │   └── agent.py                   # Travel guide agent (port 10001)
 │   ├── travel_planner_agent/
-│   │   └── agent.py                   # Travel planner agent (port 9104)
+│   │   └── agent.py                   # Travel planner agent (port 10002)
 │   └── travel_assistant_agent/
-│       └── agent.py                   # Travel assistant agent (port 9202)
+│       └── agent.py                   # Travel assistant agent (port 10000)
 ├── mcp/
 │   └── server/
 │       ├── user_mcp_server.py         # User info MCP server (port 9011)
 │       ├── prod_mcp_server.py         # Product info MCP server (port 9012)
-│       └── travel_mcp_server.py       # Travel info MCP server with Gemini grounding (port 9013)
+│       └── travel_mcp_server.py       # Travel info MCP server with Gemini grounding (port 5001)
 ├── common/
 │   └── google/
 │       ├── abstract_agent.py          # Base class for Google ADK agents
@@ -107,7 +107,7 @@ uv run uvicorn strands_app:main --reload --host 0.0.0.0 --port 9201
 # Start MCP servers
 fastmcp run mcp/server/user_mcp_server.py --transport http --port 9011
 fastmcp run mcp/server/prod_mcp_server.py --transport http --port 9012
-fastmcp run mcp/server/travel_mcp_server.py --transport http --port 9013
+fastmcp run mcp/server/travel_mcp_server.py --transport http --port 5001
 
 # Start Strands agents
 uv run strands_agents/user_agent.py
@@ -128,9 +128,9 @@ uv run uvicorn strands_app:main --reload --host 0.0.0.0 --port 9201
 - Web UI (alternate): http://localhost:9201/index
 - Strands User Agent (A2A): http://localhost:9101
 - Strands Product Agent (A2A): http://localhost:9102
-- Google Travel Guide Agent (A2A): http://localhost:9103
-- Google Travel Planner Agent (A2A): http://localhost:9104
-- Google Travel Assistant Agent (A2A): http://localhost:9202
+- Google Travel Guide Agent (A2A): http://localhost:10001
+- Google Travel Planner Agent (A2A): http://localhost:10002
+- Google Travel Assistant Agent (A2A): http://localhost:10000
 
 ### Dependency Management
 ```bash
@@ -149,10 +149,10 @@ uv pip list
 
 ## System Components
 
-### MCP Servers (Ports 9011-9013)
+### MCP Servers (Ports 9011-9012, 5001)
 - `user_mcp_server.py` (port 9011): Provides tools for user information access
 - `prod_mcp_server.py` (port 9012): Provides tools for product information access
-- `travel_mcp_server.py` (port 9013): Provides travel tools using Gemini with Google Maps grounding
+- `travel_mcp_server.py` (port 5001): Provides travel tools using Gemini with Google Maps grounding
   - Uses `MapGroundingAgent` with Gemini 2.5 Flash Lite
   - Tools tagged with `{'travel', 'guide'}` for selective loading
   - `get_place_recommendation`: Get tourist attraction recommendations by city/country
@@ -169,13 +169,13 @@ Located in `strands_agents/`:
 - Use `MCPClientSession` to connect to MCP servers
 - Tool registration via `MCPToolProvider`
 
-#### Google ADK-based Agents (Ports 9103, 9104, 9202)
+#### Google ADK-based Agents (Ports 10001, 10002, 10000)
 Located in `google_agents/`:
-- `travel_guide_agent/agent.py` (port 9103): Provides travel guide information
+- `travel_guide_agent/agent.py` (port 10001): Provides travel guide information
   - Filters tools by tag: `'guide'`
-- `travel_planner_agent/agent.py` (port 9104): Plans travel itineraries
+- `travel_planner_agent/agent.py` (port 10002): Plans travel itineraries
   - Filters tools by tag: `'planner'`
-- `travel_assistant_agent/agent.py` (port 9202): General travel assistance
+- `travel_assistant_agent/agent.py` (port 10000): General travel assistance
   - Filters tools by tag: `'travel'`
 
 **Google ADK Agent Architecture**:
@@ -221,12 +221,12 @@ Located in `google_agents/`:
 | Web App (FastAPI) | 9201 | StrandsHostAgent with UI (via strands_app.py) |
 | Strands User Agent | 9101 | User information agent |
 | Strands Product Agent | 9102 | Product information agent |
-| Google Travel Guide Agent | 9103 | Travel guide (filters tag: 'guide') |
-| Google Travel Planner Agent | 9104 | Travel planner (filters tag: 'planner') |
-| Google Travel Assistant Agent | 9202 | Travel assistant (filters tag: 'travel') |
+| Google Travel Guide Agent | 10001 | Travel guide (filters tag: 'guide') |
+| Google Travel Planner Agent | 10002 | Travel planner (filters tag: 'planner') |
+| Google Travel Assistant Agent | 10000 | Travel assistant (filters tag: 'travel') |
 | User MCP Server | 9011 | User info tools |
 | Product MCP Server | 9012 | Product info tools |
-| Travel MCP Server | 9013 | Travel info tools with Gemini grounding |
+| Travel MCP Server | 5001 | Travel info tools with Gemini grounding |
 
 ## Agent Implementation Patterns
 
@@ -297,3 +297,4 @@ When adding tools to `travel_mcp_server.py`, use appropriate tags:
 - `'travel'`: For general travel assistance (used by travel_assistant_agent)
 
 Use the `@mcp.tool(tags={...})` decorator to tag tools appropriately.
+- to memorize

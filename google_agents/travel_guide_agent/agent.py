@@ -40,7 +40,7 @@ class TravelGuideAgent(AbstractAgent):
     async def init_agent_runner(self):
         tools = await McpToolset(
             connection_params=StreamableHTTPConnectionParams(
-                url="http://localhost:9013/mcp", timeout=2.0
+                url="http://localhost:5001/mcp", timeout=2.0
             ),
             tool_filter=ToolFilter(tags=['guide'])
         ).get_tools()
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     public_agent_card = AgentCard(
         name="travel_guide_agent",
         description="travel guide agent",
-        url='http://localhost:9103/',
+        url='http://localhost:10001/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -126,4 +126,4 @@ if __name__ == "__main__":
         http_handler=request_handler,
     )
 
-    uvicorn.run(server.build(), host='0.0.0.0', port=9103)
+    uvicorn.run(server.build(), host='0.0.0.0', port=10001)
