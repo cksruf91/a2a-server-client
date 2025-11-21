@@ -26,6 +26,8 @@ def initialize_session_state():
         st.session_state.current_room_id = None
     if "room_names" not in st.session_state:
         st.session_state.room_names = {}
+    if "room_task_ids" not in st.session_state:
+        st.session_state.room_task_ids = {}
 
 
 def create_new_room(room_name: str = None) -> str:
@@ -45,6 +47,8 @@ def delete_room(room_id: str):
     if room_id in st.session_state.chat_rooms:
         del st.session_state.chat_rooms[room_id]
         del st.session_state.room_names[room_id]
+        if room_id in st.session_state.room_task_ids:
+            del st.session_state.room_task_ids[room_id]
 
         # Set current room to another room or None
         if st.session_state.chat_rooms:
@@ -69,16 +73,27 @@ def parse_sse_event(line: str) -> tuple[str, str]:
     return None, None
 
 
-def stream_chat_response(question: str, room_id: str) -> Generator[tuple[str, str], None, None]:
+def stream_chat_response(question: str, room_id: str, task_id: str = None) -> Generator[
+    tuple[str, str, str, bool], None, None]:
     """Stream chat response from the API
 
     Yields:
-        tuple[event_type, content]: Event type ('working', 'streaming', 'error') and content
+        tuple[event_type, content, task_id, require_user_input]:
+            Event type ('working', 'streaming', 'error'), content, task_id, and require_user_input flag
     """
     payload = {
         "question": question,
         "roomId": room_id
     }
+
+    # Add taskId to payload if it exists
+    if task_id:
+        payload["taskId"] = task_id
+
+    print(f"payload: {payload}")
+
+    received_task_id = None
+    require_user_input = False
 
     try:
         with httpx.Client(timeout=60.0) as client:
@@ -98,19 +113,39 @@ def stream_chat_response(question: str, room_id: str) -> Generator[tuple[str, st
                     elif field == "data":
                         try:
                             data = json.loads(value)
-                            if "contents" in data and data["contents"]:
-                                if current_event == "working":
-                                    yield ("working", data["contents"])
-                                elif current_event == "streaming":
-                                    yield ("streaming", data["contents"])
                         except json.JSONDecodeError:
                             continue
+
+                        # Extract task_id from top level
+                        if "task_id" in data:
+                            received_task_id = data["task_id"]
+
+                        # Extract contents object
+                        contents = data.get("contents", {})
+
+                        # Extract require_user_input from contents (default to False if not present)
+                        if isinstance(contents, dict) and "require_user_input" in contents:
+                            require_user_input = contents["require_user_input"]
+
+                        # Extract response from contents
+                        display_content = None
+                        if isinstance(contents, dict) and "response" in contents:
+                            display_content = contents["response"]
+                        elif isinstance(contents, str):
+                            # Fallback: if contents is a string, use it directly
+                            display_content = contents
+
+                        if display_content:
+                            if current_event == "working":
+                                yield "working", display_content, received_task_id, require_user_input
+                            elif current_event == "streaming":
+                                yield "streaming", display_content, received_task_id, require_user_input
 
                         if current_event == "Done":
                             break
 
     except Exception as e:
-        yield ("error", f"❌ Error: {str(e)}")
+        yield "error", f"❌ Error: {str(e)}", received_task_id, False
 
 
 def render_sidebar():
@@ -193,6 +228,9 @@ def render_chat_interface():
     with col2:
         if st.button("🗑️ Clear All", help="Clear all messages in this chat"):
             st.session_state.chat_rooms[current_room_id] = []
+            # Clear task_id for this room when clearing all messages
+            if current_room_id in st.session_state.room_task_ids:
+                del st.session_state.room_task_ids[current_room_id]
             st.rerun()
 
     st.divider()
@@ -227,40 +265,63 @@ def render_chat_interface():
 
         # Get assistant response
         with st.chat_message("assistant"):
-            # Placeholder for working status (temporary, will be cleared)
-            working_placeholder = st.empty()
-            # Placeholder for final response (permanent)
-            response_placeholder = st.empty()
+            # Use a single container for the entire response
+            response_container = st.container()
 
             full_response = ""
-            current_working_msg = ""
+            is_streaming = False
+            received_task_id = None
+            require_user_input = False
+
+            # Get existing task_id for this room (if any)
+            existing_task_id = st.session_state.room_task_ids.get(current_room_id)
 
             try:
-                for event_type, content in stream_chat_response(prompt, current_room_id):
-                    if event_type == "working":
-                        # Display working message in gray (temporary)
-                        current_working_msg = content
-                        working_placeholder.markdown(
-                            f'<span style="color: gray;">{current_working_msg}</span>',
-                            unsafe_allow_html=True
-                        )
+                with response_container:
+                    message_placeholder = st.empty()
 
-                    elif event_type == "streaming":
-                        # Clear working message when streaming starts
-                        working_placeholder.empty()
+                    for event_type, content, task_id, req_input in stream_chat_response(prompt, current_room_id,
+                                                                                        existing_task_id):
+                        # Store the task_id and require_user_input if received
+                        if task_id and not received_task_id:
+                            received_task_id = task_id
+                        # Update require_user_input flag
+                        require_user_input = req_input
 
-                        # Display streaming response in black (permanent)
-                        full_response = content
-                        response_placeholder.markdown(full_response + "▌")
+                        if event_type == "working":
+                            # Display working message in gray with task_id
+                            if not is_streaming:
+                                working_msg = f"task({task_id}) - working" if task_id else "working"
+                                message_placeholder.markdown(
+                                    f'<span style="color: gray;">{working_msg}</span>',
+                                    unsafe_allow_html=True
+                                )
 
-                    elif event_type == "error":
-                        working_placeholder.empty()
-                        response_placeholder.error(content)
-                        full_response = content
+                        elif event_type == "streaming":
+                            # Mark that streaming has started
+                            is_streaming = True
 
-                # Remove cursor after completion
-                if full_response:
-                    response_placeholder.markdown(full_response)
+                            # Display streaming response in black (permanent)
+                            full_response = content
+                            message_placeholder.markdown(full_response + "▌")
+
+                        elif event_type == "error":
+                            is_streaming = True
+                            message_placeholder.error(content)
+                            full_response = content
+
+                    # Remove cursor after completion
+                    if full_response:
+                        message_placeholder.markdown(full_response)
+
+                # Handle task_id based on require_user_input
+                if require_user_input and received_task_id:
+                    # Save the task_id for this room if require_user_input is true
+                    st.session_state.room_task_ids[current_room_id] = received_task_id
+                else:
+                    # Clear the task_id for this room if require_user_input is false or missing
+                    if current_room_id in st.session_state.room_task_ids:
+                        del st.session_state.room_task_ids[current_room_id]
 
                 # Add assistant message to history
                 if full_response:
@@ -271,8 +332,8 @@ def render_chat_interface():
 
             except Exception as e:
                 error_msg = f"❌ Error: {str(e)}"
-                working_placeholder.empty()
-                response_placeholder.error(error_msg)
+                with response_container:
+                    st.error(error_msg)
                 st.session_state.chat_rooms[current_room_id].append({
                     "role": "assistant",
                     "content": error_msg

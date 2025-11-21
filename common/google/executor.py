@@ -33,7 +33,19 @@ class GenericAgentExecutor(AgentExecutor):
 
         async for item in self.agent.stream(context):
             item: AgentResponse
-            if item.is_task_complete:
+            # if item.is_task_complete:
+            #     if item.response_type == 'data':
+            #         part = DataPart(data=item.content)
+            #     else:
+            #         part = TextPart(text=item.content)
+            #
+            #     await updater.add_artifact(
+            #         [part],
+            #         name=f'{self.agent.agent_name}-result',
+            #     )
+            #     await updater.complete()
+            #     break
+            if item.require_user_input or item.is_task_complete:
                 if item.response_type == 'data':
                     part = DataPart(data=item.content)
                 else:
@@ -43,20 +55,20 @@ class GenericAgentExecutor(AgentExecutor):
                     [part],
                     name=f'{self.agent.agent_name}-result',
                 )
-                await updater.complete()
+                if item.is_task_complete:
+                    await updater.complete()
+                else:
+                    print('require user input : True')
+                    await updater.update_status(
+                        TaskState.input_required,
+                        new_agent_text_message(
+                            item.content,
+                            task.context_id,
+                            task.id,
+                        ),
+                        final=True,
+                    )
                 break
-            # if item.require_user_input:
-            #     print('require user input : True')
-            #     await updater.update_status(
-            #         TaskState.input_required,
-            #         new_agent_text_message(
-            #             item.content,
-            #             task.context_id,
-            #             task.id,
-            #         ),
-            #         final=True,
-            #     )
-            #     break
             await updater.update_status(
                 TaskState.working,
                 new_agent_text_message(

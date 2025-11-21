@@ -1,17 +1,11 @@
-import uuid
 from typing import AsyncIterable
 
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 
 from .broker import AgentMessageBroker
-
-
-class ChattingRequest(BaseModel):
-    question: str = Field(default="안녕?")
-    roomId: str = Field(default_factory=lambda: str(uuid.uuid4()))
+from .model import ChattingRequest
 
 
 class TravelAssistantClient:
@@ -29,7 +23,7 @@ class TravelAssistantClient:
 
     async def stream_chat(self, request: ChattingRequest) -> AsyncIterable[bytes]:
         """Stream chat responses from travel_assistant_agent"""
-        async for bytes_ in self.broker.stream(message=request.question):
+        async for bytes_ in self.broker.stream(request=request):
             yield bytes_
 
     async def close(self):

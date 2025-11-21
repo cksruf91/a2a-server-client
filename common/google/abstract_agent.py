@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 import uuid
 from abc import abstractmethod, ABCMeta
 from typing import AsyncIterable
@@ -54,6 +55,7 @@ class AbstractAgent(metaclass=ABCMeta):
                 yield AgentResponse(
                     response_type=None,
                     is_task_complete=False,
+                    require_user_input=False,
                     content=f"{event.content}: Processing response...",
                 )
             else:
@@ -66,9 +68,17 @@ class AbstractAgent(metaclass=ABCMeta):
                             response += part.function_response.model_dump_json() + "\n"
                 else:
                     response += f"Error for running agent {self.agent_name}"
+
+                try:
+                    response = json.loads(response)
+                except json.decoder.JSONDecodeError:
+                    print(f"Invalid response format : {response}")
+
+                require_user_input = response.get('require_user_input', False)
                 yield AgentResponse(
                     response_type="text",
-                    is_task_complete=True,
+                    is_task_complete=False if require_user_input else True,
+                    require_user_input=require_user_input,
                     content=response,
                 )
 
@@ -88,6 +98,7 @@ class AbstractAgent(metaclass=ABCMeta):
                 print(event.model_dump_json())
 
     async def _get_or_create_session(self, user_id: str, session_id: str) -> Session:
+        print(f"session id: {session_id}")
         session = None
         if not session_id:
             session_id = uuid.uuid4().hex
@@ -103,20 +114,20 @@ class AbstractAgent(metaclass=ABCMeta):
                 user_id=user_id,
                 session_id=session_id,
             )
-            print(f"[Session Management] session created : {session.id}")
+            print(f"[{self.agent_name} Session Management] session created : {session.id}")
         else:
-            print(f"[Session Management] session retrieved : {session.id}")
+            print(f"[{self.agent_name} Session Management] session retrieved : {session.id}")
         return session
 
     async def _delete_expired_session(self) -> None:
         session_list = await self.session_service.list_sessions(app_name=self.agent_name)
-        print("[Session Management] current session count : {}".format(len(session_list.sessions)))
+        print(f"[{self.agent_name} Session Management] current session count : {len(session_list.sessions)}")
 
-        delta_time = datetime.timedelta(seconds=2).total_seconds()
+        delta_time = datetime.timedelta(seconds=60).total_seconds()
         for _session in session_list.sessions:
             if (_session.last_update_time + delta_time) < datetime.datetime.now().timestamp():
-                print("[Session Management] session expired, id(last_update_time): {}({})".format(
-                    _session.id, _session.last_update_time))
+                print(f"[{self.agent_name} Session Management] session expired, "
+                      f"id(last_update_time): {_session.id}({_session.last_update_time})")
                 await self.session_service.delete_session(
                     app_name=_session.app_name,
                     user_id=_session.user_id,
@@ -126,5 +137,5 @@ class AbstractAgent(metaclass=ABCMeta):
     async def _manage_session(self, user_id: str, session_id: str | None) -> Session:
         session = await self._get_or_create_session(user_id, session_id)
         asyncio.create_task(self._delete_expired_session())
-        print(f"[Session Management] finished, session_id: {session.id}")
+        print(f"[{self.agent_name} Session Management] finished, session_id: {session.id}")
         return session
