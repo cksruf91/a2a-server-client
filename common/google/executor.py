@@ -33,19 +33,7 @@ class GenericAgentExecutor(AgentExecutor):
 
         async for item in self.agent.stream(context):
             item: AgentResponse
-            # if item.is_task_complete:
-            #     if item.response_type == 'data':
-            #         part = DataPart(data=item.content)
-            #     else:
-            #         part = TextPart(text=item.content)
-            #
-            #     await updater.add_artifact(
-            #         [part],
-            #         name=f'{self.agent.agent_name}-result',
-            #     )
-            #     await updater.complete()
-            #     break
-            if item.require_user_input or item.is_task_complete:
+            if item.is_task_complete:
                 if item.response_type == 'data':
                     part = DataPart(data=item.content)
                 else:
@@ -55,28 +43,76 @@ class GenericAgentExecutor(AgentExecutor):
                     [part],
                     name=f'{self.agent.agent_name}-result',
                 )
-                if item.is_task_complete:
-                    await updater.complete()
-                else:
-                    print('require user input : True')
-                    await updater.update_status(
-                        TaskState.input_required,
-                        new_agent_text_message(
-                            item.content,
-                            task.context_id,
-                            task.id,
-                        ),
-                        final=True,
-                    )
+                print(f"Task completed, {self.agent.agent_name}, task id: {task.id}")
+                await updater.complete()
                 break
-            await updater.update_status(
-                TaskState.working,
-                new_agent_text_message(
-                    item.content,
-                    task.context_id,
-                    task.id,
-                ),
-            )
+            else:
+                await updater.update_status(
+                    TaskState.working,
+                    new_agent_text_message(
+                        item.content,
+                        task.context_id,
+                        task.id,
+                    ),
+                )
+
+    # async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+    #     print(f'Executing agent, {self.agent.agent_name}')
+    #     task = context.current_task
+    #     if not task:
+    #         task = new_task(context.message)
+    #         await event_queue.enqueue_event(task)
+    #         context.current_task = task
+    #
+    #     updater = TaskUpdater(event_queue, task_id=task.id, context_id=task.context_id)
+    #
+    #     async for item in self.agent.stream(context):
+    #         item: AgentResponse
+    #         # if item.is_task_complete:
+    #         #     if item.response_type == 'data':
+    #         #         part = DataPart(data=item.content)
+    #         #     else:
+    #         #         part = TextPart(text=item.content)
+    #         #
+    #         #     await updater.add_artifact(
+    #         #         [part],
+    #         #         name=f'{self.agent.agent_name}-result',
+    #         #     )
+    #         #     await updater.complete()
+    #         #     break
+    #         if item.require_user_input or item.is_task_complete:
+    #             if item.response_type == 'data':
+    #                 part = DataPart(data=item.content)
+    #             else:
+    #                 part = TextPart(text=item.content)
+    #
+    #             await updater.add_artifact(
+    #                 [part],
+    #                 name=f'{self.agent.agent_name}-result',
+    #             )
+    #             if item.is_task_complete:
+    #                 print(f"Task completed, {self.agent.agent_name}, task id: {task.id}")
+    #                 await updater.complete()
+    #             else:
+    #                 print('require user input : True')
+    #                 await updater.update_status(
+    #                     TaskState.input_required,
+    #                     new_agent_text_message(
+    #                         item.content,
+    #                         task.context_id,
+    #                         task.id,
+    #                     ),
+    #                     final=True,
+    #                 )
+    #             break
+    #         await updater.update_status(
+    #             TaskState.working,
+    #             new_agent_text_message(
+    #                 item.content,
+    #                 task.context_id,
+    #                 task.id,
+    #             ),
+    #         )
 
     async def cancel(
             self, request: RequestContext, event_queue: EventQueue

@@ -61,7 +61,10 @@ class AgentMessageBroker:
                 Part(root=TextPart(
                     text=request.question,
                 ))
-            ]
+            ],
+            metadata={  # noqa
+                "userId": request.userId,
+            }
         )
 
         output = None
@@ -88,7 +91,6 @@ class AgentMessageBroker:
 
         response = await self.client.get_task(TaskQueryParams(id=task.id, history_length=1))
         if hasattr(response, 'artifacts') and response.artifacts:
-            print(response)
             for artifact in response.artifacts:
                 output = artifact.parts[0].root.text
                 try:

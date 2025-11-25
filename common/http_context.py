@@ -5,6 +5,15 @@ from typing import Callable
 import httpx
 
 
+def get_httpx_context() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        timeout=60,
+        headers={
+            "Content-Type": "application/json",
+        }
+    )
+
+
 def httpx_context(func: Callable):
     """
     비동기 함수 또는 비동기 제너레이터 함수를 래핑하는 데코레이터로, `httpx.AsyncClient` 인스턴스를 제공합니다.
@@ -23,12 +32,7 @@ def httpx_context(func: Callable):
         # Async generator function (yields values)
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            async with httpx.AsyncClient(
-                    timeout=60,
-                    headers={
-                        "Content-Type": "application/json",
-                    }
-            ) as httpx_client:
+            async with get_httpx_context() as httpx_client:
                 kwargs['httpx_client'] = httpx_client
                 async for event in func(*args, **kwargs):
                     yield event
@@ -38,12 +42,7 @@ def httpx_context(func: Callable):
         # Regular async function (returns a value)
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            async with httpx.AsyncClient(
-                    timeout=60,
-                    headers={
-                        "Content-Type": "application/json",
-                    }
-            ) as httpx_client:
+            async with get_httpx_context() as httpx_client:
                 kwargs['httpx_client'] = httpx_client
                 return await func(*args, **kwargs)
 

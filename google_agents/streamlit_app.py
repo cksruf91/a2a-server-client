@@ -28,16 +28,20 @@ def initialize_session_state():
         st.session_state.room_names = {}
     if "room_task_ids" not in st.session_state:
         st.session_state.room_task_ids = {}
+    if "room_user_ids" not in st.session_state:
+        st.session_state.room_user_ids = {}
 
 
 def create_new_room(room_name: str = None) -> str:
     """Create a new chat room"""
     room_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
     if room_name is None:
         room_name = f"Chat {len(st.session_state.chat_rooms) + 1}"
 
     st.session_state.chat_rooms[room_id] = []
     st.session_state.room_names[room_id] = room_name
+    st.session_state.room_user_ids[room_id] = user_id
     st.session_state.current_room_id = room_id
     return room_id
 
@@ -49,6 +53,8 @@ def delete_room(room_id: str):
         del st.session_state.room_names[room_id]
         if room_id in st.session_state.room_task_ids:
             del st.session_state.room_task_ids[room_id]
+        if room_id in st.session_state.room_user_ids:
+            del st.session_state.room_user_ids[room_id]
 
         # Set current room to another room or None
         if st.session_state.chat_rooms:
@@ -73,7 +79,7 @@ def parse_sse_event(line: str) -> tuple[str, str]:
     return None, None
 
 
-def stream_chat_response(question: str, room_id: str, task_id: str = None) -> Generator[
+def stream_chat_response(question: str, room_id: str, user_id: str, task_id: str = None) -> Generator[
     tuple[str, str, str, bool], None, None]:
     """Stream chat response from the API
 
@@ -83,7 +89,8 @@ def stream_chat_response(question: str, room_id: str, task_id: str = None) -> Ge
     """
     payload = {
         "question": question,
-        "roomId": room_id
+        "roomId": room_id,
+        "userId": user_id
     }
 
     # Add taskId to payload if it exists
@@ -275,13 +282,15 @@ def render_chat_interface():
 
             # Get existing task_id for this room (if any)
             existing_task_id = st.session_state.room_task_ids.get(current_room_id)
+            # Get user_id for this room
+            user_id = st.session_state.room_user_ids.get(current_room_id)
 
             try:
                 with response_container:
                     message_placeholder = st.empty()
 
                     for event_type, content, task_id, req_input in stream_chat_response(prompt, current_room_id,
-                                                                                        existing_task_id):
+                                                                                        user_id, existing_task_id):
                         # Store the task_id and require_user_input if received
                         if task_id and not received_task_id:
                             received_task_id = task_id

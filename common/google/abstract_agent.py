@@ -1,6 +1,5 @@
 import asyncio
 import datetime
-import json
 import uuid
 from abc import abstractmethod, ABCMeta
 from typing import AsyncIterable
@@ -28,11 +27,17 @@ class AbstractAgent(metaclass=ABCMeta):
 
     async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
         query = context.get_user_input()
-        # print("hist : ", context.current_task.history)
-        print('Running agent stream for session {context_id} {task_id} - {query}'.format(
-            context_id=context.current_task.context_id,
-            task_id=context.current_task.id,
-            query=query,
+        if context.message.metadata is not None:
+            user_id = context.message.metadata.get('userId', 'unknown')
+        else:
+            user_id = 'unknown'
+
+        print('Running agent {} context_id: {} task_id:{} user_id:{} - query:{}'.format(
+            self.agent_name,
+            context.current_task.context_id,
+            context.current_task.id,
+            user_id,
+            query,
         ))
         if not query:
             raise ValueError('Query cannot be empty')
@@ -40,8 +45,7 @@ class AbstractAgent(metaclass=ABCMeta):
         if not self.runner:
             await self.init_agent_runner()
 
-        user_id = context.metadata.get('userId', uuid.uuid4().hex)
-        session = await self._manage_session(user_id=user_id, session_id=context.current_task.id)
+        session = await self._manage_session(user_id=user_id, session_id=context.current_task.context_id)
 
         content = types.Content(role='user', parts=[types.Part(text=query)])
         async for event in self.runner.run_async(
@@ -55,7 +59,6 @@ class AbstractAgent(metaclass=ABCMeta):
                 yield AgentResponse(
                     response_type=None,
                     is_task_complete=False,
-                    require_user_input=False,
                     content=f"{event.content}: Processing response...",
                 )
             else:
@@ -69,36 +72,28 @@ class AbstractAgent(metaclass=ABCMeta):
                 else:
                     response += f"Error for running agent {self.agent_name}"
 
-                try:
-                    response = json.loads(response)
-                except json.decoder.JSONDecodeError:
-                    print(f"Invalid response format : {response}")
-
-                require_user_input = response.get('require_user_input', False)
                 yield AgentResponse(
                     response_type="text",
-                    is_task_complete=False if require_user_input else True,
-                    require_user_input=require_user_input,
+                    is_task_complete=True,
                     content=response,
                 )
 
     @staticmethod
     def middle_event_logging(event: Event) -> None:
-        print("------[Event Log]------")
+        print("\t------[Event Log]------")
         for part in event.content.parts:
             if part.function_call:
-                print("{name}({args})".format(
+                print("\t{name}({args})".format(
                     name=part.function_call.name, args=part.function_call.args))
             elif part.function_response:
-                print("{name} response : {resp})".format(
+                print("\t{name} response : {resp})".format(
                     name=part.function_response.name, resp=part.function_response.response))
             elif part.text:
-                print("{text}".format(text=part.text))
+                print("\t{text}".format(text=part.text))
             else:
                 print(event.model_dump_json())
 
     async def _get_or_create_session(self, user_id: str, session_id: str) -> Session:
-        print(f"session id: {session_id}")
         session = None
         if not session_id:
             session_id = uuid.uuid4().hex
