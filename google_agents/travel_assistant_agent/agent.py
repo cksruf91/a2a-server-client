@@ -69,7 +69,7 @@ async def _invoke_agent(url: str, message: Message, default_output: str = "") ->
         return default_output
 
 
-async def call_travel_guide_agent(query: str) -> str:
+async def call_travel_guide_agent(message: str) -> str:
     """ A tool that calls travel_guide_agent to provide information about specific places and recommend nearby attractions
 
     Use this tool when users request:
@@ -77,7 +77,7 @@ async def call_travel_guide_agent(query: str) -> str:
     - Geographical information near or within a specific area (e.g., 'find tourist attractions in [area]', 'recommend restaurants in [area]')
 
     Args:
-        query (str): Question to retrieve information from the agent
+        message (str): Question to retrieve information from the agent
 
     Returns:
         str: Agent's response
@@ -87,7 +87,7 @@ async def call_travel_guide_agent(query: str) -> str:
         role=Role.user,
         parts=[
             Part(root=TextPart(
-                text=query,
+                text=message,
             ))
         ]
     )
@@ -96,15 +96,16 @@ async def call_travel_guide_agent(query: str) -> str:
     return await _invoke_agent(url="http://localhost:10001", message=m, default_output=result)
 
 
-async def call_travel_planner_agent(query: str) -> str:
+async def call_travel_planner_agent(message: str) -> str:
     """ A tool for calling travel_planner_agent to handle travel planning or modifications for specific regions.
 
     Use this tool when users:
     - Request a travel itinerary for a specific region
     - Request modifications to a previously requested travel plan
+    - When user request modify previously requested travel plan, include previous plan that user wants to modify in message
 
     Args:
-        query (str): Question to retrieve information from the agent
+        message (str): Question to retrieve information from the agent
 
     Returns:
         str: Agent's response
@@ -114,7 +115,7 @@ async def call_travel_planner_agent(query: str) -> str:
         role=Role.user,
         parts=[
             Part(root=TextPart(
-                text=query,
+                text=message,
             ))
         ]
     )

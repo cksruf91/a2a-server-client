@@ -154,7 +154,7 @@ async def get_place_information(
         'get_place_information tool invoked, params({}, {})'.format(
             landmark_or_place_name, query
         ))
-    instruction = f"""Please provide information about location as following request
+    instruction = f"""Please provide information about the location based on the following request
     request: {query}
     location: {landmark_or_place_name}
     """
@@ -208,7 +208,7 @@ async def get_tour_plan(
     else:
         prompt += "\nPlease exclude accommodation from the itinerary"
     if query is not None:
-        prompt += "\nconsidering follow user's request"
+        prompt += "\nconsidering the following user's request"
         prompt += f"\n{query}"
 
     response = gemini.map_grounding(instruction=prompt)
