@@ -13,7 +13,7 @@ from google.adk.apps.app import App
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.planners import BuiltInPlanner
 from google.adk.runners import Runner
-from google.adk.tools import FunctionTool
+from google.adk.tools import AgentTool
 from google.genai import types
 from google.genai.types import ThinkingConfig
 
@@ -22,7 +22,7 @@ from common.google.executor import GenericAgentExecutor
 from common.http_context import get_httpx_context
 from google_agents.callback import agent_input_check_callback
 
-_ = RemoteA2aAgent(
+travel_guide_agent = RemoteA2aAgent(
     name="travel_guide_agent",
     description="travel_guide_agent",
     agent_card=(
@@ -30,7 +30,7 @@ _ = RemoteA2aAgent(
     ),
 )
 
-_ = RemoteA2aAgent(
+travel_planner_agent = RemoteA2aAgent(
     name="travel_planner_agent",
     description="travel_planner_agent",
     agent_card=(
@@ -39,7 +39,8 @@ _ = RemoteA2aAgent(
 )
 
 
-async def _invoke_agent(url: str, message: Message, default_output: str = "") -> str:
+async def _invoke_agent(url: str, message: Message,
+                        default_output: str = "") -> str:  # TODO Remove if deemed unnecessary
     async with get_httpx_context() as httpx_client:
         resolver = A2ACardResolver(
             httpx_client=httpx_client,
@@ -69,7 +70,7 @@ async def _invoke_agent(url: str, message: Message, default_output: str = "") ->
         return default_output
 
 
-async def call_travel_guide_agent(message: str) -> str:
+async def call_travel_guide_agent(message: str) -> str:  # TODO Remove if deemed unnecessary
     """ A tool that calls travel_guide_agent to provide information about specific places and recommend nearby attractions
 
     Use this tool when users request:
@@ -96,7 +97,7 @@ async def call_travel_guide_agent(message: str) -> str:
     return await _invoke_agent(url="http://localhost:10001", message=m, default_output=result)
 
 
-async def call_travel_planner_agent(message: str) -> str:
+async def call_travel_planner_agent(message: str) -> str:  # TODO Remove if deemed unnecessary
     """ A tool for calling travel_planner_agent to handle travel planning or modifications for specific regions.
 
     Use this tool when users:
@@ -144,10 +145,9 @@ class GoogleADKHostAgent(AbstractAgent):
             name="travel_assistant_agent",
             instruction=instruction,
             tools=[
-                FunctionTool(func=call_travel_guide_agent),
-                FunctionTool(func=call_travel_planner_agent),
+                AgentTool(travel_guide_agent),
+                AgentTool(travel_planner_agent),
             ],
-            # sub_agents=[travel_guide_agent, travel_planner_agent],
             generate_content_config=types.GenerateContentConfig(
                 temperature=0.0,
                 safety_settings=[
