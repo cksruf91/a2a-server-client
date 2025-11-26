@@ -82,7 +82,7 @@ class TravelPlannerAgent(AbstractAgent):
 if __name__ == "__main__":
     public_agent_card = AgentCard(
         name="travel_planner_agent",
-        description="travel planner agent",
+        description="travel planner agent, Creates travel plan base on user request",
         url='http://localhost:10002/',
         version='1.0.0',
         default_input_modes=['text'],

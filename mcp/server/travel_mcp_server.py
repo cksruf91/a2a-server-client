@@ -47,11 +47,13 @@ class ContextMocker(Context):
 
 def ensure_context(func):
     """Decorator to ensure ctx parameter is not None by providing ContextMocker as default."""
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         if 'ctx' not in kwargs or kwargs['ctx'] is None:
             kwargs['ctx'] = ContextMocker()
         return await func(*args, **kwargs)
+
     return wrapper
 
 
@@ -111,6 +113,20 @@ async def get_place_recommendation(
         instruction = f"Please recommend {place_type} near {city_or_country_name}"
     else:
         instruction = f"Please recommend key tourist attractions near {city_or_country_name}"
+
+    instruction += """
+    # Key Guidelines
+    1. return recommend place in markdown table style
+      example)
+      | Place Name | Description | Link | Review |
+      |------------|-------------|------|--------|
+      | Everest Curry World | 인도 및 네팔 요리를 제공하는 인기 레스토랑입니다. 가격대는 중간 정도이며, 늦은 시간까지 운영합니다. 식사, 포장, 배달이 가능합니다. | https://example.com | ⭐⭐⭐⭐ |
+      | 라 그릴리아 광화문 | 점심과 저녁에 운영되며 라이브 음악을 즐길 수 있습니다. |https://example.com | ⭐⭐⭐⭐⭐ |
+      * Place Name : place name
+      * Description : place description
+      * Link : link (if passable or blank)
+      * Review : place review score
+    """
 
     response = gemini.map_grounding(instruction=instruction)
     return ToolResult(

@@ -92,7 +92,7 @@ class TravelGuideAgent(AbstractAgent):
 if __name__ == "__main__":
     public_agent_card = AgentCard(
         name="travel_guide_agent",
-        description="travel guide agent",
+        description="travel guide agent, provide information about specific locations or recommendations.",
         url='http://localhost:10001/',
         version='1.0.0',
         default_input_modes=['text'],

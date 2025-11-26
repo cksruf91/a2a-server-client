@@ -7,7 +7,7 @@ import httpx
 
 def get_httpx_context() -> httpx.AsyncClient:
     return httpx.AsyncClient(
-        timeout=60,
+        timeout=60 * 3,
         headers={
             "Content-Type": "application/json",
         }
