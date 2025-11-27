@@ -55,10 +55,11 @@ class ChatResponse(BaseModel):
 
 
 class StrandsHostAgent(AbstractAgent):
-    AGENT_URLS = [
-        'http://localhost:9101',
-        'http://localhost:9102',
-    ]
+    AGENT_URLS = {
+        "http://localhost:9101/": "user_agent",
+        "http://localhost:9102/": "product_agent",
+        "http://localhost:9103/": "travel_guide_agent",
+    }
     _prompt = yaml.safe_load(
         Path('strands_agents').joinpath('resource').joinpath('prompt.yaml').open('r')
     )
@@ -69,7 +70,8 @@ class StrandsHostAgent(AbstractAgent):
         super().__init__()
 
     async def get_agent(self) -> Agent:
-        provider = A2AClientToolProvider(known_agent_urls=self.AGENT_URLS)
+        urls = [url for url, name in self.AGENT_URLS.items()]
+        provider = A2AClientToolProvider(known_agent_urls=urls)
         conversation_manager = SlidingWindowConversationManager(
             window_size=10,
         )
@@ -109,10 +111,16 @@ class StrandsHostAgent(AbstractAgent):
 
         async for event in self.agent.stream_async(request.to_model_input()):
             if 'current_tool_use' in event:
+                input_: str = event['current_tool_use'].get('input', '')
+                try:
+                    target_agent_url = json.loads(input_).get('target_agent_url')
+                    status_message = "ask {} ..".format(self.AGENT_URLS.get(target_agent_url, 'agent'))
+                except json.decoder.JSONDecodeError:
+                    status_message = "ask agent .."
                 yield ServerSentEvent(
                     event='executing',
                     data=json.dumps({
-                        'message': "ask agent..", 'contents': None
+                        'message': status_message, 'contents': None
                     })
                 ).encode()
             elif "data" in event:
@@ -122,7 +130,7 @@ class StrandsHostAgent(AbstractAgent):
                         'message': 'in progress', 'contents': event["data"]
                     })
                 ).encode()
-        print(event)
+
         yield ServerSentEvent(
             event='Done',
             data=json.dumps({

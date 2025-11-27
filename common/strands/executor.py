@@ -2,11 +2,13 @@ from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.utils import new_agent_text_message
 
+from common.strands.abstract_agent import AbstractAgent
+
 
 class StrandsAgentExecutor(AgentExecutor):
     """ AgentProxy Implementation """
 
-    def __init__(self, agent):
+    def __init__(self, agent: AbstractAgent):
         self.agent = agent
 
     async def execute(
