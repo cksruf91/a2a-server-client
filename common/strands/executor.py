@@ -17,7 +17,13 @@ class StrandsAgentExecutor(AgentExecutor):
             event_queue: EventQueue,
     ) -> None:
         result = await self.agent.invoke(context.message)
-        await event_queue.enqueue_event(new_agent_text_message(result))
+        await event_queue.enqueue_event(
+            new_agent_text_message(
+                result,
+                context_id=context.context_id,
+                task_id=context.task_id,
+            )
+        )
 
     async def cancel(
             self, context: RequestContext, event_queue: EventQueue

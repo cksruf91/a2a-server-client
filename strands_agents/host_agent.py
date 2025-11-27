@@ -31,6 +31,7 @@ class ChattingRequest(BaseModel):
     question: str = Field(
         default="안녕?"
     )
+    userId: str = Field(..., description="User ID")
     roomId: str = Field(default_factory=lambda: str(uuid.uuid4()))
     history: list[tuple[Literal['user', 'assistant'], str]] = Field(
         default_factory=lambda: [],

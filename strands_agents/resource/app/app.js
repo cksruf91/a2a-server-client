@@ -2,8 +2,10 @@ const API_BASE_URL = 'http://localhost:9201';
 const COMPLETE_ENDPOINT = '/chat/complete';
 const STREAM_ENDPOINT = '/chat/stream'
 const INIT_MESSAGE = 'Hello! I\'m your AI assistant How can i help you!'
+const DEFAULT_USER_ID = 'FB0CD4'; // Default user ID
 let currentMode = 'normal';
 let roomId = 'test-room-' + Date.now();
+let userId = DEFAULT_USER_ID; // Initialize with default user ID
 let chatHistory = []; // Store chat history as [["user", "message"], ["assistant", "response"]]
 let currentSessionId = null; // Track current session ID
 
@@ -339,6 +341,7 @@ async function sendNormalMessage(text) {
         body: JSON.stringify({
             question: text,
             roomId: roomId,
+            userId: userId,
             history: chatHistory
         })
     });
@@ -368,6 +371,7 @@ async function sendStreamMessage(text) {
         body: JSON.stringify({
             question: text,
             roomId: roomId,
+            userId: userId,
             history: chatHistory
         })
     });

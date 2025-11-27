@@ -42,7 +42,7 @@ async def get_user_name(user_id: str, ctx: Context = None) -> ToolResult:
         ctx: ContextMocker = ContextMocker()
     await ctx.info('get_user_name tool invoked')
     nams_space = {
-        'M4386': 'D.B.Cooper'
+        'FB0CD4': 'D.B.Cooper'
     }
     user_name = nams_space.get(user_id)
     await ctx.info(f'get_user_name return value [{user_name}]')
@@ -77,7 +77,7 @@ async def get_user_address(user_id: str, ctx: Context = None) -> ToolResult:
         ctx: ContextMocker = ContextMocker()
     await ctx.info('get_user_address tool invoked')
     nams_space = {
-        'M4386': 'Seattle Tacoma International Airport'
+        'FB0CD4': 'Seattle Tacoma International Airport'
     }
     user_address = nams_space.get(user_id)
     await ctx.info(f'get_user_address return value [{user_address}]')
@@ -112,7 +112,7 @@ async def get_user_booked_item(user_id: str, ctx: Context = None) -> ToolResult:
         ctx: ContextMocker = ContextMocker()
     await ctx.info('get_user_booked_item tool invoked')
     nams_space = {
-        'M4386': ["BALI004", "TOKYO002"]
+        'FB0CD4': ["BALI004", "TOKYO002"]
     }
     booked_item = nams_space.get(user_id)
     await ctx.info(f'get_user_booked_item return value [{booked_item}]')
