@@ -38,11 +38,16 @@ The project consists of three layers:
 
 ```
 a2a-server-client/
-├── strands_app.py                      # FastAPI web app (port 9201)
 ├── strands_agents/
+│   ├── app.py                         # FastAPI web app (port 9201)
 │   ├── host_agent.py                  # StrandsHostAgent orchestrator
 │   ├── user_agent.py                  # User information agent (port 9101)
-│   └── product_agent.py               # Product information agent (port 9102)
+│   ├── product_agent.py               # Product information agent (port 9102)
+│   └── resource/
+│       ├── prompt.yaml                # System prompts for agents (Korean)
+│       └── app/
+│           ├── index.html             # Chat UI frontend
+│           └── app.js                 # Frontend JavaScript (API_BASE_URL: port 9201)
 ├── google_agents/
 │   ├── travel_guide_agent/
 │   │   └── agent.py                   # Travel guide agent (port 10001)
@@ -56,17 +61,15 @@ a2a-server-client/
 │       ├── prod_mcp_server.py         # Product info MCP server (port 9012)
 │       └── travel_mcp_server.py       # Travel info MCP server with Gemini grounding (port 5001)
 ├── common/
-│   └── google/
-│       ├── abstract_agent.py          # Base class for Google ADK agents
-│       ├── executor.py                # GenericAgentExecutor for A2A integration
-│       ├── tool.py                    # ToolFilter for MCP tool filtering by tags
-│       └── types.py                   # Type definitions for agent responses
-├── resource/
-│   ├── prompt.yaml                    # System prompts for agents (Korean)
-│   └── app/
-│       ├── index.html                 # Chat UI frontend
-│       ├── app.js                     # Frontend JavaScript (API_BASE_URL: port 9201)
-│       └── README.md                  # Frontend documentation
+│   ├── google/
+│   │   ├── abstract_agent.py          # Base class for Google ADK agents
+│   │   ├── executor.py                # GenericAgentExecutor for A2A integration
+│   │   ├── tool.py                    # ToolFilter for MCP tool filtering by tags
+│   │   └── types.py                   # Type definitions for agent responses
+│   └── strands/
+│       ├── abstract_agent.py          # Base class for Strands agents
+│       ├── executor.py                # StrandsAgentExecutor for A2A integration
+│       └── tool.py                    # ToolServerClient for MCP tool loading
 ├── run_strands_agents.sh              # Script to start strands agents
 ├── run_google_agents.sh               # Script to start google agents
 ├── run_mcp_server.sh                  # Script to start all MCP servers
@@ -99,7 +102,7 @@ uv sync
 ./run_google_agents.sh
 
 # Terminal 4 - Start web application
-uv run uvicorn strands_app:main --reload --host 0.0.0.0 --port 9201
+uv run uvicorn strands_agents.app:main --reload --host 0.0.0.0 --port 9201
 ```
 
 #### Option 2: Manual Start
@@ -119,7 +122,7 @@ uv run google_agents/travel_planner_agent/agent.py
 uv run google_agents/travel_assistant_agent/agent.py
 
 # Start web app
-uv run uvicorn strands_app:main --reload --host 0.0.0.0 --port 9201
+uv run uvicorn strands_agents.app:main --reload --host 0.0.0.0 --port 9201
 ```
 
 ### Accessing the Application
@@ -154,20 +157,24 @@ uv pip list
 - `prod_mcp_server.py` (port 9012): Provides tools for product information access
 - `travel_mcp_server.py` (port 5001): Provides travel tools using Gemini with Google Maps grounding
   - Uses `MapGroundingAgent` with Gemini 2.5 Flash Lite
-  - Tools tagged with `{'travel', 'guide'}` for selective loading
-  - `get_place_recommendation`: Get tourist attraction recommendations by city/country
-  - `get_place_information`: Get detailed information about landmarks
-  - `get_tour_plan`: Generate multi-day travel itineraries
+  - Tools tagged with multiple tags for selective loading by different agents
+  - Available tools:
+    - `get_place_recommendation` (tags: `{'travel', 'guide'}`): Get tourist attraction recommendations by city/country with optional theme filtering
+    - `get_place_information` (tags: `{'travel', 'guide'}`): Get detailed information about landmarks
+    - `get_tour_plan` (tags: `{'travel', 'planner'}`): Generate multi-day travel itineraries with hotel options
+    - `change_tour_plan` (tags: `{'travel', 'planner'}`): Modify existing travel itineraries based on requirements
 
 ### A2A Agents
 
 #### Strands-based Agents (Ports 9101-9102)
 Located in `strands_agents/`:
 - `user_agent.py` (port 9101): Handles user-related queries using MCP user tools
+  - Connects to user MCP server at `http://localhost:9011/mcp`
 - `product_agent.py` (port 9102): Handles product-related queries using MCP product tools
-- Both extend `MCPAgentWithClient` from strands-agents
-- Use `MCPClientSession` to connect to MCP servers
-- Tool registration via `MCPToolProvider`
+  - Connects to product MCP server at `http://localhost:9012/mcp`
+- Both extend custom `AbstractAgent` from `common/strands/abstract_agent.py`
+- Use `ToolServerClient` to connect to MCP servers via streamable HTTP
+- Tool registration via `MCPClient.list_tools_sync()`
 
 #### Google ADK-based Agents (Ports 10001, 10002, 10000)
 Located in `google_agents/`:
@@ -195,21 +202,21 @@ Located in `google_agents/`:
   - Uses `A2AClientToolProvider` for agent communication
   - Configured to connect to agents at ports 9101 and 9102 (Strands agents only)
   - Provides both complete and streaming chat endpoints
-  - Loads system prompts from `resource/prompt.yaml`
-  - Implements custom `A2AExecutor` for task execution
+  - Loads system prompts from `strands_agents/resource/prompt.yaml`
+  - Implements custom `HostAgentExecutor` (extends `StrandsAgentExecutor`) for task execution
   - Handles chat history and session management
 
-- `strands_app.py`: FastAPI-based web application (port 9201)
+- `strands_agents/app.py`: FastAPI-based web application (port 9201)
   - Imports and uses `StrandsHostAgent` from `strands_agents/host_agent.py`
   - Exposes REST API endpoints: `/chat/complete` and `/chat/stream`
-  - Serves static frontend files from `resource/app/` at `/static`
+  - Serves static frontend files from `strands_agents/resource/app/` at `/static`
   - Provides `/index` endpoint serving the chat UI
   - Mounts A2A application for protocol compliance
   - CORS enabled for frontend-backend communication
 
 ### Frontend
 - Single-page application with chat interface
-- Located in `resource/app/`
+- Located in `strands_agents/resource/app/`
 - Connects to FastAPI backend on port 9201
 - Supports both normal (complete) and streaming chat modes
 - Session management with localStorage persistence
@@ -218,7 +225,7 @@ Located in `google_agents/`:
 
 | Component | Port | Description |
 |-----------|------|-------------|
-| Web App (FastAPI) | 9201 | StrandsHostAgent with UI (via strands_app.py) |
+| Web App (FastAPI) | 9201 | StrandsHostAgent with UI (via strands_agents/app.py) |
 | Strands User Agent | 9101 | User information agent |
 | Strands Product Agent | 9102 | Product information agent |
 | Google Travel Guide Agent | 10001 | Travel guide (filters tag: 'guide') |
@@ -232,11 +239,13 @@ Located in `google_agents/`:
 
 ### Strands-based Agents
 Pattern used in `strands_agents/user_agent.py` and `strands_agents/product_agent.py`:
-- Extend `MCPAgentWithClient` from strands-agents
-- Use `MCPClientSession` to connect to MCP servers
-- Tool registration via `MCPToolProvider`
-- A2A protocol handled automatically by strands framework
-- Runs as standalone A2A server
+- Extend custom `AbstractAgent` base class (`common/strands/abstract_agent.py`)
+- Use `ToolServerClient` (`common/strands/tool.py`) to connect to MCP servers via HTTP
+- Create `Agent` instance with `OpenAIModel` (GPT-4o-mini)
+- Tool registration via `MCPClient.list_tools_sync()` with `ConcurrentToolExecutor`
+- A2A protocol integration via `StrandsAgentExecutor` (`common/strands/executor.py`)
+- Each agent defines its own `AgentCard` with skills and capabilities
+- Runs as standalone A2A server using `A2AStarletteApplication`
 
 ### Google ADK-based Agents
 Pattern used in all agents under `google_agents/`:
@@ -263,7 +272,7 @@ Pattern used in all agents under `google_agents/`:
 - **Tool Provision**: Tools are provided via MCP (Model Context Protocol) servers
 - **Host Agent Limitation**: StrandsHostAgent currently only connects to Strands agents (ports 9101, 9102), not Google ADK agents
 - **MCP Tool Tagging**: Tools in travel MCP server are tagged (`'guide'`, `'planner'`, `'travel'`) for selective loading by different agents
-- **System Prompts**: Defined in `resource/prompt.yaml` (Korean language)
+- **System Prompts**: Defined in `strands_agents/resource/prompt.yaml` (Korean language)
 - **Frontend Features**:
   - Supports both complete and streaming chat modes
   - Session persistence using browser localStorage
@@ -274,11 +283,14 @@ Pattern used in all agents under `google_agents/`:
 
 #### For Strands-based agents:
 1. Create MCP server in `mcp/server/` with tools (if needed)
-2. Create agent file in `strands_agents/` extending `MCPAgentWithClient`
-3. Configure MCP connection via `MCPClientSession`
-4. Choose a unique port for the agent
-5. Add to `run_strands_agents.sh` startup script
-6. Update `StrandsHostAgent.AGENT_URLS` in `strands_agents/host_agent.py` to include the new agent
+2. Create agent file in `strands_agents/` extending `AbstractAgent` from `common/strands/abstract_agent.py`
+3. Create `ToolServerClient` with MCP server URL (e.g., `http://localhost:PORT/mcp`)
+4. Implement `get_agent()` to return `Agent` instance with `OpenAIModel` and tools from `list_tools()`
+5. Implement `invoke()` method to handle A2A messages
+6. Define `AgentCard` with skills and create `A2AStarletteApplication` in `__main__`
+7. Choose a unique port for the agent
+8. Add to `run_strands_agents.sh` startup script
+9. Update `StrandsHostAgent.AGENT_URLS` in `strands_agents/host_agent.py` to include the new agent
 
 #### For Google ADK-based agents:
 1. Create MCP server with tagged tools in `mcp/server/` (if needed)

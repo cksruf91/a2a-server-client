@@ -21,7 +21,6 @@ async def get_chatting_message(request: ChattingRequest) -> ChatResponse:
 
 @chat_router.post('/stream')
 async def get_chatting_stream_message(request: ChattingRequest) -> StreamingResponse:
-    print('stream')
     return StreamingResponse(
         StrandsHostAgent().stream(request),
         media_type="text/event-stream"
@@ -45,7 +44,7 @@ def main():
         allow_headers=["*"],
     )
 
-    static_file_path = Path("resource/app")
+    static_file_path = Path("strands_agents/resource/app")
     app.mount("/static", StaticFiles(directory=static_file_path, html=True), name="static")
 
     @app.get("/index")

@@ -2,28 +2,29 @@ import asyncio
 import json
 import uuid
 from pathlib import Path
-from typing import AsyncIterable
-from typing import Literal
+from typing import AsyncIterable, Literal
 
 import httpx
 import uvicorn
 import yaml
 from a2a.client import A2ACardResolver
-from a2a.server.agent_execution import AgentExecutor, RequestContext
+from a2a.server.agent_execution import RequestContext
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.events import EventQueue
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
-from a2a.types import AgentSkill, AgentCard, AgentCapabilities
-from a2a.types import Message as A2aMessage
+from a2a.types import AgentSkill, AgentCard, AgentCapabilities, Message as A2aMessage
 from a2a.utils import new_agent_text_message
 from pydantic import BaseModel, Field
 from sse_starlette.sse import ServerSentEvent
 from strands import Agent
 from strands.agent.conversation_manager import SlidingWindowConversationManager
 from strands.models.openai import OpenAIModel
-from strands.types.content import Message, ContentBlock
+from strands.types import content as strands_content
 from strands_tools.a2a_client import A2AClientToolProvider
+
+from common.strands.abstract_agent import AbstractAgent
+from common.strands.executor import StrandsAgentExecutor
 
 
 class ChattingRequest(BaseModel):
@@ -36,107 +37,77 @@ class ChattingRequest(BaseModel):
         description="chat history, format: [(\"user\",\"hello\"), (\"assistant\": \"hi! how are you doing?\nhow can i help you?\")]"
     )
 
+    def to_model_input(self) -> list[strands_content.Message]:
+        messages = []
+        for role, content in self.history:
+            messages.append(
+                strands_content.Message(role=role, content=[
+                    strands_content.ContentBlock(text=content)
+                ])
+            )
+        messages.append({"role": "user", "content": [{"text": self.question}]})
+        return messages
+
 
 class ChatResponse(BaseModel):
     message: str = Field()
     roomId: str = Field()
 
 
-class StrandsHostAgent:
+class StrandsHostAgent(AbstractAgent):
     AGENT_URLS = [
         'http://localhost:9101',
         'http://localhost:9102',
     ]
     _prompt = yaml.safe_load(
-        Path('.').joinpath('resource').joinpath('prompt.yaml').open('r')
+        Path('strands_agents').joinpath('resource').joinpath('prompt.yaml').open('r')
     )
 
     host_system_prompt: str = _prompt.get('a2a').get('host').get('system')
 
     def __init__(self):
-        self.provider = A2AClientToolProvider(known_agent_urls=self.AGENT_URLS)
-        self.conversation_manager = SlidingWindowConversationManager(
+        super().__init__()
+
+    async def get_agent(self) -> Agent:
+        provider = A2AClientToolProvider(known_agent_urls=self.AGENT_URLS)
+        conversation_manager = SlidingWindowConversationManager(
             window_size=10,
         )
-        self.model = OpenAIModel(
+        cards = [card.model_dump_json() for card in await self.get_agent_cards()]
+        model = OpenAIModel(
             model_id="gpt-4o-mini",
             params={
                 "temperature": 0.1,
             }
         )
-
-    async def invoke(self, a2a_message: A2aMessage | None) -> str:
-        if a2a_message is None:
-            return "no message"
-        cards = [
-            c.model_dump_json() for c in await self.get_agent_cards()
-        ]
-        sys_prompt = self.host_system_prompt.format(agent_card=cards)
-        agent = Agent(
-            model=self.model,
-            tools=self.provider.tools,
-            system_prompt=sys_prompt
+        return Agent(
+            model=model,
+            tools=provider.tools,
+            conversation_manager=conversation_manager,
+            system_prompt=self.host_system_prompt.format(agent_card=cards)
         )
 
-        message = Message(role='user', content=[])
-        for part in a2a_message.parts:
-            if part.root.kind == "text":
-                message['content'].append(
-                    ContentBlock(text=part.root.text)
-                )
-        result = agent([message])
-        # Access metrics through the AgentResult
-        print(f"Total tokens: {result.metrics.accumulated_usage['totalTokens']}")
-        print(f"Execution time: {sum(result.metrics.cycle_durations):.2f} seconds")
-        print(f"Tools used: {list(result.metrics.tool_metrics.keys())}")
+    async def invoke(self, a2a_message: A2aMessage | None) -> str:
+        message = self._parsing_a2a_message(a2a_message)
+        if self.agent is None:
+            self.agent = await self.get_agent()
+        result = self._logging_metrics(self.agent([message]))
+
         return result.message['content'][0]['text']
 
     async def complete(self, request: ChattingRequest) -> str:
-        messages = []
-        for conversation in request.history:
-            messages.append(
-                {"role": conversation[0], "content": [{"text": conversation[1]}]}
-            )
-        messages.append({"role": "user", "content": [{"text": request.question}]})
 
-        cards = [
-            c.model_dump_json() for c in await self.get_agent_cards()
-        ]
-        sys_prompt = self.host_system_prompt.format(agent_card=cards)
-        agent = Agent(
-            model=self.model,
-            tools=self.provider.tools,
-            system_prompt=sys_prompt,
-        )
+        if self.agent is None:
+            self.agent = await self.get_agent()
 
-        result = agent(
-            messages, conversation_manager=self.conversation_manager,
-        )
-
-        # Access metrics through the AgentResult
-        print(f"Total tokens: {result.metrics.accumulated_usage['totalTokens']}")
-        print(f"Execution time: {sum(result.metrics.cycle_durations):.2f} seconds")
-        print(f"Tools used: {list(result.metrics.tool_metrics.keys())}")
+        result = self._logging_metrics(self.agent(request.to_model_input()))
         return result.message['content'][0]['text']
 
     async def stream(self, request: ChattingRequest) -> AsyncIterable[bytes]:
-        messages = []
-        for conversation in request.history:
-            messages.append(
-                {"role": conversation[0], "content": [{"text": conversation[1]}]}
-            )
-        messages.append({"role": "user", "content": [{"text": request.question}]})
+        if self.agent is None:
+            self.agent = await self.get_agent()
 
-        cards = [
-            c.model_dump_json() for c in await self.get_agent_cards()
-        ]
-        sys_prompt = self.host_system_prompt.format(agent_card=cards)
-        agent = Agent(
-            model=self.model,
-            tools=self.provider.tools,
-            system_prompt=sys_prompt,
-        )
-        async for event in agent.stream_async(messages):
+        async for event in self.agent.stream_async(request.to_model_input()):
             if 'current_tool_use' in event:
                 yield ServerSentEvent(
                     event='executing',
@@ -151,6 +122,7 @@ class StrandsHostAgent:
                         'message': 'in progress', 'contents': event["data"]
                     })
                 ).encode()
+        print(event)
         yield ServerSentEvent(
             event='Done',
             data=json.dumps({
@@ -170,18 +142,16 @@ class StrandsHostAgent:
         return cards
 
 
-class HostAgentExecutor(AgentExecutor):
+class HostAgentExecutor(StrandsAgentExecutor):
 
-    def __init__(self):
-        self.agent = StrandsHostAgent()
+    def __init__(self, agent):
+        super().__init__(agent)
 
     async def execute(
             self,
             context: RequestContext,
             event_queue: EventQueue,
     ) -> None:
-        if context.message is None:
-            raise RuntimeError('No message')
         result = await self.agent.invoke(context.message)
         await event_queue.enqueue_event(
             new_agent_text_message(
@@ -190,11 +160,6 @@ class HostAgentExecutor(AgentExecutor):
                 task_id=context.task_id,
             )
         )
-
-    async def cancel(
-            self, context: RequestContext, event_queue: EventQueue
-    ) -> None:
-        raise Exception('cancel not supported')
 
 
 async def get_a2a_application() -> A2AStarletteApplication:
@@ -216,7 +181,7 @@ async def get_a2a_application() -> A2AStarletteApplication:
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=HostAgentExecutor(),
+        agent_executor=HostAgentExecutor(StrandsHostAgent()),
         task_store=InMemoryTaskStore(),
     )
 

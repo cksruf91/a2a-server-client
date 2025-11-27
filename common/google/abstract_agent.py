@@ -118,7 +118,7 @@ class AbstractAgent(metaclass=ABCMeta):
         session_list = await self.session_service.list_sessions(app_name=self.agent_name)
         print(f"[{self.agent_name} Session Management] current session count : {len(session_list.sessions)}")
 
-        delta_time = datetime.timedelta(seconds=60).total_seconds()
+        delta_time = datetime.timedelta(minutes=10).total_seconds()
         for _session in session_list.sessions:
             if (_session.last_update_time + delta_time) < datetime.datetime.now().timestamp():
                 print(f"[{self.agent_name} Session Management] session expired, "
