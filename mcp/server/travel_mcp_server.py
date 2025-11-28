@@ -66,6 +66,7 @@ def ensure_context(func):
 async def get_place_recommendation(
         city_or_country_name: str,
         theme: str = None,
+        num_places: int = 5,
         ctx: Context = None
 ) -> ToolResult:
     """Gets place recommendations for a specified city or country.
@@ -81,7 +82,10 @@ async def get_place_recommendation(
             - "cafe" or "카페": Cafes and coffee shops
             - "shopping" or "쇼핑": Shopping areas and markets
             - "nature" or "자연": Parks and natural attractions
+            - "accommodation" or "숙소": Hotels and accommodations
             If not specified, returns general tourist attractions.
+        num_places (int, optional): Number of places to recommend. Defaults to 5.
+            Must be a positive integer. Recommended range: 1-20.
         ctx (Context, optional): Internal use only, ignore this parameter.
 
     Returns:
@@ -89,7 +93,7 @@ async def get_place_recommendation(
     """
     await ctx.info(
         'get_place_recommendation tool invoked, '
-        'params(city_or_country_name={}, theme={})'.format(city_or_country_name, theme)
+        'params(city_or_country_name={}, theme={}, num_places={})'.format(city_or_country_name, theme, num_places)
     )
     gemini = MapGroundingAgent()
 
@@ -107,12 +111,14 @@ async def get_place_recommendation(
             "shopping": "shopping areas and markets",
             "자연": "parks and natural attractions",
             "nature": "parks and natural attractions",
+            "숙소": "hotels and accommodations",
+            "accommodation": "hotels and accommodations",
         }
 
         place_type = theme_mapping.get(theme.lower(), f"{theme} places")
-        instruction = f"Please recommend {place_type} near {city_or_country_name}"
+        instruction = f"Please recommend exactly {num_places} {place_type} near {city_or_country_name}"
     else:
-        instruction = f"Please recommend key tourist attractions near {city_or_country_name}"
+        instruction = f"Please recommend exactly {num_places} key tourist attractions near {city_or_country_name}"
 
     instruction += """
     # Key Guidelines

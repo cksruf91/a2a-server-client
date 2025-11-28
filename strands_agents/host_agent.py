@@ -25,6 +25,7 @@ class StrandsHostAgent(AbstractAgent):
         "http://localhost:9101/": "user_agent",
         "http://localhost:9102/": "product_agent",
         "http://localhost:9103/": "travel_guide_agent",
+        "http://localhost:9104/": "travel_planner_agent",
     }
     _prompt = yaml.safe_load(
         Path('strands_agents').joinpath('resource').joinpath('prompt.yaml').open('r')
@@ -83,7 +84,7 @@ async def get_a2a_application() -> A2AStarletteApplication:
     public_agent_card = AgentCard(
         name="User & Product information provide agent",
         description="this agent provide User & product information",
-        url='http://localhost:9201/',
+        url='http://localhost:10000/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -106,4 +107,4 @@ async def get_a2a_application() -> A2AStarletteApplication:
 
 if __name__ == '__main__':
     app = asyncio.run(get_a2a_application())
-    uvicorn.run(app.build(), host='0.0.0.0', port=9201)
+    uvicorn.run(app.build(), host='0.0.0.0', port=10000)

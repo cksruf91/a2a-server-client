@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Handle Ctrl+C signal
-trap 'echo -e "\nShutting down all agents..."; kill $PID_BETA $PID_GAMMA $PID_DELTA $PID_HOST 2>/dev/null; exit 0' SIGINT
+trap 'echo -e "\nShutting down all agents..."; kill $PID_BETA $PID_GAMMA $PID_DELTA $PID_EPSILON $PID_HOST 2>/dev/null; exit 0' SIGINT
 
 # Function to wait for a port to be ready
 wait_for_port() {
@@ -35,24 +35,30 @@ echo "Starting Travel Guide Agent (port 9103)..."
 uv run strands_agents/travel_guide_agent.py &
 PID_DELTA=$!
 
-# Wait for all three agents to be ready
+echo "Starting Travel Planner Agent (port 9104)..."
+uv run strands_agents/travel_planner_agent.py &
+PID_EPSILON=$!
+
+# Wait for all four agents to be ready
 wait_for_port 9101 "User Agent"
 wait_for_port 9102 "Product Agent"
 wait_for_port 9103 "Travel Guide Agent"
+wait_for_port 9104 "Travel Planner Agent"
 
 echo ""
 echo "All base agents are ready. Starting Host Agent..."
-echo "Starting Host Agent with FastAPI (port 9201)..."
+echo "Starting Host Agent with FastAPI (port 10000)..."
 uv run strands_agents/host_agent.py &
 PID_HOST=$!
 
-wait_for_port 9201 "Host Agent"
+wait_for_port 10000 "Host Agent"
 
 echo ""
 echo "All agents are running. Press Ctrl+C to terminate."
 echo "User Agent PID: $PID_BETA"
 echo "Product Agent PID: $PID_GAMMA"
 echo "Travel Guide Agent PID: $PID_DELTA"
+echo "Travel Planner Agent PID: $PID_EPSILON"
 echo "Host Agent PID: $PID_HOST"
 
 # Wait until processes terminate

@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 import nest_asyncio
@@ -13,17 +12,21 @@ from common.model import ChatResponse, ChattingRequest
 nest_asyncio.apply()
 chat_router = APIRouter(prefix='/chat', tags=['chat'])
 
+agent_message_broker = AgentMessageBroker(agent_url='http://localhost:10000/')
+
 
 @chat_router.post('/complete')
 async def get_chatting_message(request: ChattingRequest) -> ChatResponse:
-    output = await AgentMessageBroker(agent_url='http://localhost:9201/').complete(request)
+    global agent_message_broker
+    output = await agent_message_broker.complete(request)
     return ChatResponse(roomId=request.roomId, message=output)
 
 
 @chat_router.post('/stream')
 async def get_chatting_stream_message(request: ChattingRequest) -> StreamingResponse:
+    global agent_message_broker
     return StreamingResponse(
-        AgentMessageBroker(agent_url='http://localhost:9201/').stream(request),
+        agent_message_broker.stream(request),
         media_type="text/event-stream"
     )
 
