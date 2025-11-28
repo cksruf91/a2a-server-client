@@ -1,9 +1,11 @@
+from typing import AsyncIterable
+
 import uvicorn
+from a2a.server.agent_execution import RequestContext
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentSkill, AgentCard, AgentCapabilities
-from a2a.types import Message as A2aMessage
 from strands import Agent
 from strands.models.openai import OpenAIModel
 from strands.tools.executors import ConcurrentToolExecutor
@@ -18,11 +20,10 @@ class ProductInfoAgent(AbstractAgent):
 
     def __init__(self):
         super().__init__()
-        self.tool_service = ToolServerClient(
-            url="http://localhost:9012/mcp"
-        )
+        self.name = "Product Info Agent"
+        self.mcp_server_url = "http://localhost:9012/mcp"
 
-    def get_agent(self) -> Agent:
+    async def get_agent(self, tool_client: ToolServerClient) -> Agent:
         model = OpenAIModel(
             model_id="gpt-4o-mini",
             params={
@@ -31,21 +32,19 @@ class ProductInfoAgent(AbstractAgent):
         )
         return Agent(
             model=model,
-            tools=self.tool_service.list_tools(),
+            name=self.name,
+            tools=tool_client.list_tools(),
             tool_executor=ConcurrentToolExecutor(),
             system_prompt="provide product information based on user's request"
         )
 
-    async def invoke(self, a2a_message: A2aMessage) -> str:
-        message = self._parsing_a2a_message(a2a_message)
-
-        if self.agent is None:
-            self.agent = self.get_agent()
-
-        with self.tool_service.tool_server:
-            result = self._logging_metrics(self.agent([message]))
-
-        return result.message['content'][0]['text']
+    async def stream(self, context: RequestContext) -> AsyncIterable[dict]:
+        # print(id(self), self.tool_client.tool_server)
+        tool_client = ToolServerClient(url=self.mcp_server_url)
+        agent = await self.get_agent(tool_client)
+        with tool_client.tool_server:
+            async for event in self._run_agent(agent, context):
+                yield event
 
 
 if __name__ == "__main__":

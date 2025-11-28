@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:9201';
+const API_BASE_URL = 'http://localhost:9001';
 const COMPLETE_ENDPOINT = '/chat/complete';
 const STREAM_ENDPOINT = '/chat/stream'
 const INIT_MESSAGE = 'Hello! I\'m your AI assistant How can i help you!'
@@ -423,15 +423,15 @@ async function sendStreamMessage(text) {
 
                 if (dataStr && dataStr !== '[DONE]') {
                     try {
-                        const data = JSON.parse(dataStr);
+                        const data = JSON.parse(dataStr).data;
                         console.log('Parsed data:', data, 'Event:', currentEvent);
 
-                        if (currentEvent === 'stream') {
+                        if (currentEvent === 'streaming') {
                             // Stream mode: accumulate and display contents
-                            if (data.contents) {
+                            if (data.content) {
                                 // Remove status message styling when streaming starts
                                 bubble.classList.remove('status-message');
-                                accumulatedText += data.contents;
+                                accumulatedText += data.content;
                                 bubble.textContent = accumulatedText;
                                 console.log('Accumulated text length:', accumulatedText.length);
                             }

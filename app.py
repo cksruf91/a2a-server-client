@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from strands_agents.host_agent import StrandsHostAgent, ChatResponse, ChattingRequest, get_a2a_application
+from common.broker import AgentMessageBroker
+from common.model import ChatResponse, ChattingRequest
 
 nest_asyncio.apply()
 chat_router = APIRouter(prefix='/chat', tags=['chat'])
@@ -15,22 +16,22 @@ chat_router = APIRouter(prefix='/chat', tags=['chat'])
 
 @chat_router.post('/complete')
 async def get_chatting_message(request: ChattingRequest) -> ChatResponse:
-    output = await StrandsHostAgent().complete(request)
+    output = await AgentMessageBroker(agent_url='http://localhost:9201/').complete(request)
     return ChatResponse(roomId=request.roomId, message=output)
 
 
 @chat_router.post('/stream')
 async def get_chatting_stream_message(request: ChattingRequest) -> StreamingResponse:
     return StreamingResponse(
-        StrandsHostAgent().stream(request),
+        AgentMessageBroker(agent_url='http://localhost:9201/').stream(request),
         media_type="text/event-stream"
     )
 
 
 def main():
     app = FastAPI(
-        title="Host Agent",
-        description="Host Agent executor",
+        title="Chatting UI",
+        description="serve chat ui",
         version="1.0"
     )
     app.include_router(chat_router)
@@ -44,14 +45,11 @@ def main():
         allow_headers=["*"],
     )
 
-    static_file_path = Path("strands_agents/resource/app")
+    static_file_path = Path("common/resource/app")
     app.mount("/static", StaticFiles(directory=static_file_path, html=True), name="static")
 
     @app.get("/index")
     async def serve_frontend():
         return FileResponse(static_file_path.joinpath("index.html"))
-
-    a2a_starlette_app = asyncio.run(get_a2a_application())
-    app.mount('/', a2a_starlette_app.build())
 
     return app
