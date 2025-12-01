@@ -12,6 +12,11 @@ a2a:
 {agent_card}
 </AgentCards>
 
+다음은 사용자에 대한 정보입니다.
+<userInformation>
+{user_info}
+</userInformation>
+
 <instruction>
 markdown 포멧을 활용하여 답변하세요
 </instruction>

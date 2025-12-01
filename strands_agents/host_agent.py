@@ -38,7 +38,7 @@ class StrandsHostAgent(AbstractAgent):
         super().__init__()
         self.name = "Host Agent"
 
-    async def get_agent(self) -> Agent:
+    async def get_agent(self, user_id: str) -> Agent:
         urls = [url for url, name in self.AGENT_URLS.items()]
         provider = A2AClientToolProvider(known_agent_urls=urls)
         conversation_manager = SlidingWindowConversationManager(
@@ -56,11 +56,17 @@ class StrandsHostAgent(AbstractAgent):
             name=self.name,
             tools=provider.tools,
             conversation_manager=conversation_manager,
-            system_prompt=self.host_system_prompt.format(agent_card=cards)
+            system_prompt=self.host_system_prompt.format(
+                agent_card=cards,
+                user_info={"userId": user_id}
+            )
         )
 
     async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
-        agent = await self.get_agent()
+        user_id = "null"
+        if getattr(context.message, "metadata", None) is not None:
+            user_id = context.message.metadata.get("userId", "")
+        agent = await self.get_agent(user_id)
         async for event in self._run_agent(agent, context):
             yield event
 

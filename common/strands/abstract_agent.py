@@ -22,14 +22,14 @@ class AbstractAgent(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    async def stream(self, context: RequestContext) -> AsyncIterable[dict]:
+    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
         ...
 
     async def _run_agent(self, agent: Agent, context: RequestContext) -> AsyncIterable[AgentResponse]:
         # context.get_user_input()
         message = self._parsing_a2a_message(context.message)
 
-        async for event in agent.stream_async([message]):
+        async for event in agent.stream_async(message):
             status_message = ""
             if 'current_tool_use' in event:
                 tool_name = event['current_tool_use'].get('name')
@@ -68,13 +68,25 @@ class AbstractAgent(metaclass=ABCMeta):
         return result
 
     @staticmethod
-    def _parsing_a2a_message(a2a_message: a2a_types.Message) -> strands_content.Message:
+    def _parsing_a2a_message(a2a_message: a2a_types.Message) -> list[strands_content.Message]:
         if a2a_message is None:
             raise ValueError("input message is None")
+
+        messages = []
+        if getattr(a2a_message, "metadata", None) is not None:
+            history = a2a_message.metadata.get("history", [])
+            for role, message in history:
+                messages.append(
+                    strands_content.Message(
+                        role=role, content=[strands_content.ContentBlock(text=message)]
+                    )
+                )
+
         message = strands_content.Message(role='user', content=[])
         for part in a2a_message.parts:
             if part.root.kind == "text":
                 message['content'].append(
                     strands_content.ContentBlock(text=part.root.text)
                 )
-        return message
+        messages.append(message)
+        return messages

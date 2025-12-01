@@ -64,6 +64,7 @@ class AgentMessageBroker:
             ],
             metadata={  # noqa
                 "userId": request.userId,
+                "history": request.history,
             }
         )
 
