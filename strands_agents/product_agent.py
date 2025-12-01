@@ -10,9 +10,10 @@ from strands import Agent
 from strands.models.openai import OpenAIModel
 from strands.tools.executors import ConcurrentToolExecutor
 
+from common.executor import GenericAgentExecutor
 from common.strands.abstract_agent import AbstractAgent
-from common.strands.executor import StrandsAgentExecutor
 from common.strands.tool import ToolServerClient
+from common.types import AgentResponse
 
 
 class ProductInfoAgent(AbstractAgent):
@@ -38,7 +39,7 @@ class ProductInfoAgent(AbstractAgent):
             system_prompt="provide product information based on user's request"
         )
 
-    async def stream(self, context: RequestContext) -> AsyncIterable[dict]:
+    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
         # print(id(self), self.tool_client.tool_server)
         tool_client = ToolServerClient(url=self.mcp_server_url)
         agent = await self.get_agent(tool_client)
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=StrandsAgentExecutor(ProductInfoAgent()),
+        agent_executor=GenericAgentExecutor(ProductInfoAgent()),
         task_store=InMemoryTaskStore(),
     )
 

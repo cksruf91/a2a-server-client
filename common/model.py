@@ -7,9 +7,9 @@ from strands.types import content as strands_content
 
 class ChattingRequest(BaseModel):
     question: str = Field(default="안녕?")
-    userId: str = Field(..., description="User ID")
+    userId: str | None = Field(default=None, description="User ID")
     roomId: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    taskId: str = Field(default=None)
+    taskId: str | None = Field(default=None)
     history: list[tuple[Literal['user', 'assistant'], str]] = Field(
         default_factory=lambda: [],
         description="chat history, format: [(\"user\",\"hello\"), (\"assistant\": \"hi! how are you doing?\nhow can i help you?\")]"

@@ -13,8 +13,8 @@ from google.adk.tools import AgentTool
 from google.genai import types
 from google.genai.types import ThinkingConfig
 
+from common.executor import GenericAgentExecutor
 from common.google.abstract_agent import AbstractAgent
-from common.google.executor import GenericAgentExecutor
 from common.google.remote_agent import RemoteAgentResolver
 from google_agents.callback import agent_input_check_callback
 

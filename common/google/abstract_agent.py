@@ -11,7 +11,7 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.sessions import Session
 from google.genai import types
 
-from common.google.types import AgentResponse
+from common.types import AgentResponse
 
 
 class AbstractAgent(metaclass=ABCMeta):
@@ -26,6 +26,10 @@ class AbstractAgent(metaclass=ABCMeta):
         ...
 
     async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
+        """Stream events in format compatible with GenericAgentExecutor.
+
+        Yields AgentResponse
+        """
         query = context.get_user_input()
         if context.message.metadata is not None:
             user_id = context.message.metadata.get('userId', 'unknown')
@@ -48,6 +52,8 @@ class AbstractAgent(metaclass=ABCMeta):
         session = await self._manage_session(user_id=user_id, session_id=context.current_task.context_id)
 
         content = types.Content(role='user', parts=[types.Part(text=query)])
+        accumulated_response = ""
+
         async for event in self.runner.run_async(
                 user_id=user_id,
                 session_id=session.id,
@@ -56,12 +62,14 @@ class AbstractAgent(metaclass=ABCMeta):
             self.middle_event_logging(event)
 
             if not event.is_final_response():
+                # Tool calling or intermediate processing
                 yield AgentResponse(
-                    response_type=None,
-                    is_task_complete=False,
-                    content=f"{event.content}: Processing response...",
+                    status="tool_calling",
+                    message=f"{event.content}: Processing...",
+                    content=None
                 )
             else:
+                # Final response - stream the content
                 response = ""
                 if event.content and event.content.parts:
                     for part in event.content.parts:
@@ -73,10 +81,18 @@ class AbstractAgent(metaclass=ABCMeta):
                     response += f"Error for running agent {self.agent_name}"
 
                 yield AgentResponse(
-                    response_type="text",
-                    is_task_complete=True,
-                    content=response,
+                    status="stream",
+                    message="Streaming response",
+                    content=response.strip()
                 )
+                accumulated_response = response.strip()
+
+        # Signal completion
+        yield AgentResponse(
+            status="Done",
+            message="Completed",
+            content=accumulated_response
+        )
 
     @staticmethod
     def middle_event_logging(event: Event) -> None:

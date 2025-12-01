@@ -10,9 +10,10 @@ from strands import Agent
 from strands.models.openai import OpenAIModel
 from strands.tools.executors import ConcurrentToolExecutor
 
+from common.executor import GenericAgentExecutor
 from common.strands.abstract_agent import AbstractAgent
-from common.strands.executor import StrandsAgentExecutor
 from common.strands.tool import ToolServerClient
+from common.types import AgentResponse
 
 
 class UserInfoAgent(AbstractAgent):
@@ -38,7 +39,7 @@ class UserInfoAgent(AbstractAgent):
             system_prompt="provide user information based on user's request"
         )
 
-    async def stream(self, context: RequestContext) -> AsyncIterable[dict]:
+    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
         tool_client = ToolServerClient(url=self.mcp_server_url)
         agent = await self.get_agent(tool_client=tool_client)
         with tool_client.tool_server:
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=StrandsAgentExecutor(UserInfoAgent()),
+        agent_executor=GenericAgentExecutor(UserInfoAgent()),
         task_store=InMemoryTaskStore(),
     )
 

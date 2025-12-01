@@ -10,9 +10,10 @@ from strands import Agent
 from strands.models.openai import OpenAIModel
 from strands.tools.executors import ConcurrentToolExecutor
 
+from common.executor import GenericAgentExecutor
 from common.strands.abstract_agent import AbstractAgent
-from common.strands.executor import StrandsAgentExecutor
 from common.strands.tool import ToolServerClient
+from common.types import AgentResponse
 
 
 class TravelGuideAgent(AbstractAgent):
@@ -38,7 +39,7 @@ class TravelGuideAgent(AbstractAgent):
             system_prompt="provide travel guide information based on user's request, including place recommendations and detailed information about landmarks"
         )
 
-    async def stream(self, context: RequestContext) -> AsyncIterable[dict]:
+    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
         tool_client = ToolServerClient(url=self.mcp_server_url, tags=['guide'])
         agent = self.get_agent(tool_client=tool_client)
         with tool_client.tool_server:
@@ -83,7 +84,7 @@ if __name__ == "__main__":
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=StrandsAgentExecutor(TravelGuideAgent()),
+        agent_executor=GenericAgentExecutor(TravelGuideAgent()),
         task_store=InMemoryTaskStore(),
     )
 

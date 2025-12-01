@@ -16,8 +16,9 @@ from strands.agent.conversation_manager import SlidingWindowConversationManager
 from strands.models.openai import OpenAIModel
 from strands_tools.a2a_client import A2AClientToolProvider
 
+from common.executor import GenericAgentExecutor
 from common.strands.abstract_agent import AbstractAgent
-from common.strands.executor import StrandsAgentExecutor
+from common.types import AgentResponse
 
 
 class StrandsHostAgent(AbstractAgent):
@@ -58,7 +59,7 @@ class StrandsHostAgent(AbstractAgent):
             system_prompt=self.host_system_prompt.format(agent_card=cards)
         )
 
-    async def stream(self, context: RequestContext) -> AsyncIterable[dict]:
+    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
         agent = await self.get_agent()
         async for event in self._run_agent(agent, context):
             yield event
@@ -94,7 +95,7 @@ async def get_a2a_application() -> A2AStarletteApplication:
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=StrandsAgentExecutor(StrandsHostAgent()),
+        agent_executor=GenericAgentExecutor(StrandsHostAgent()),
         task_store=InMemoryTaskStore(),
     )
 

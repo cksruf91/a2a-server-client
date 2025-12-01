@@ -8,6 +8,8 @@ from strands import Agent
 from strands.agent.agent_result import AgentResult
 from strands.types import content as strands_content
 
+from common.types import AgentResponse
+
 
 class AbstractAgent(metaclass=ABCMeta):
 
@@ -23,7 +25,7 @@ class AbstractAgent(metaclass=ABCMeta):
     async def stream(self, context: RequestContext) -> AsyncIterable[dict]:
         ...
 
-    async def _run_agent(self, agent: Agent, context: RequestContext) -> AsyncIterable[dict]:
+    async def _run_agent(self, agent: Agent, context: RequestContext) -> AsyncIterable[AgentResponse]:
         # context.get_user_input()
         message = self._parsing_a2a_message(context.message)
 
@@ -39,26 +41,23 @@ class AbstractAgent(metaclass=ABCMeta):
                 except json.decoder.JSONDecodeError:
                     continue
 
-                yield {
-                    "status": "tool_calling",
-                    "data": {
-                        'message': status_message, 'content': None
-                    }
-                }
+                yield AgentResponse(
+                    status="tool_calling",
+                    message=status_message,
+                    content=None
+                )
             elif "data" in event:
-                yield {
-                    "status": "stream",
-                    "data": {
-                        'message': "in progress", 'content': event["data"]
-                    }
-                }
+                yield AgentResponse(
+                    status="stream",
+                    message="in progress",
+                    content=event['data']
+                )
 
-        yield {
-            "status": "Done",
-            "data": {
-                'message': "Done", 'content': ""
-            }
-        }
+        yield AgentResponse(
+            status="Done",
+            message="Done",
+            content=""
+        )
 
     @staticmethod
     def _logging_metrics(result: AgentResult) -> AgentResult:

@@ -5,17 +5,22 @@ from a2a.types import TaskState, DataPart
 from a2a.utils import new_task
 from a2a.utils.parts import Part
 
-from common.strands.abstract_agent import AbstractAgent
+from common.types import AgentResponse
 
 
-class StrandsAgentExecutor(AgentExecutor):
-    """ AgentProxy Implementation """
+class GenericAgentExecutor(AgentExecutor):
+    """Generic Agent Executor for both Strands and Google ADK agents.
 
-    def __init__(self, agent: AbstractAgent):
+    Expects agents to yield dict with format:
+    {'status': 'tool_calling|stream|Done', 'data': {'message': '...', 'content': '...'}}
+    """
+
+    def __init__(self, agent):
         self.agent = agent
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        print(f'Executing agent, {self.agent.name}')
+        agent_name = getattr(self.agent, 'name', None) or getattr(self.agent, 'agent_name', 'unknown')
+        print(f'Executing agent, {agent_name}')
         task = context.current_task
         if not task:
             task = new_task(context.message)
@@ -33,30 +38,30 @@ class StrandsAgentExecutor(AgentExecutor):
         )
 
         accumulate_message = ""
-        async for item in self.agent.stream(context):  # noqa
-            # item : {'status': 'tool_calling|stream|Done', 'data': {'message': 'in progress', 'content': '을'}}
-            if item['status'] == "stream":
-                accumulate_message += item['data']['content']
+        async for item in self.agent.stream(context):
+            item: AgentResponse
+            if item.status == "stream":
+                accumulate_message += item.content
 
-            if item['status'] != "stream" and accumulate_message:
+            if item.status != "stream" and accumulate_message:
                 await updater.add_artifact(
                     parts=[Part(root=DataPart(
                         data={"message": "return to user", "content": accumulate_message}
                     ))],
-                    name='{} {}'.format(self.agent.name, item['status']),
+                    name='{} {}'.format(agent_name, str(item.status))
                 )
                 accumulate_message = ""
 
-            if item['status'] == "tool_calling":
+            if item.status == "tool_calling":
                 await updater.update_status(
                     TaskState.working,
                     updater.new_agent_message(
-                        parts=[Part(root=DataPart(data=item['data']))]
+                        parts=[Part(root=DataPart(data=item.data))]
                     )
                 )
 
-            if item['status'] == "Done":
-                print(f"Task completed, {self.agent.name}, task id: {task.id}")
+            if item.status == "Done":
+                print(f"Task completed, {agent_name}, task id: {task.id}")
                 await updater.complete()
 
     async def cancel(
