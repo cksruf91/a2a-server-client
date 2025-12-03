@@ -14,9 +14,9 @@ from google.genai import types
 from google.genai.types import ThinkingConfig
 
 from common.executor import GenericAgentExecutor
-from common.google.abstract_agent import AbstractAgent
-from common.google.remote_agent import RemoteAgentResolver
 from google_agents.callback import agent_input_check_callback
+from google_agents.common.abstract_agent import AbstractAgent
+from google_agents.common.remote_agent import RemoteAgentResolver
 
 travel_guide_agent = RemoteAgentResolver(
     name="travel_guide_agent",

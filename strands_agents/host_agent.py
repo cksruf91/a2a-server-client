@@ -19,6 +19,7 @@ from strands_tools.a2a_client import A2AClientToolProvider
 from common.executor import GenericAgentExecutor
 from common.strands.abstract_agent import AbstractAgent
 from common.types import AgentResponse
+from strands.handlers.callback_handler import PrintingCallbackHandler
 
 
 class StrandsHostAgent(AbstractAgent):
@@ -56,6 +57,7 @@ class StrandsHostAgent(AbstractAgent):
             name=self.name,
             tools=provider.tools,
             conversation_manager=conversation_manager,
+            callback_handler=PrintingCallbackHandler(),
             system_prompt=self.host_system_prompt.format(
                 agent_card=cards,
                 user_info={"userId": user_id}
