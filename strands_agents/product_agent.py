@@ -11,9 +11,9 @@ from strands.models.openai import OpenAIModel
 from strands.tools.executors import ConcurrentToolExecutor
 
 from common.executor import GenericAgentExecutor
-from common.strands.abstract_agent import AbstractAgent
-from common.strands.tool import ToolServerClient
 from common.types import AgentResponse
+from strands_agents.common.abstract_agent import AbstractAgent
+from strands_agents.common.tool import ToolServerClient
 
 
 class ProductInfoAgent(AbstractAgent):

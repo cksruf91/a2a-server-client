@@ -13,13 +13,13 @@ from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentSkill, AgentCard, AgentCapabilities
 from strands import Agent
 from strands.agent.conversation_manager import SlidingWindowConversationManager
+from strands.handlers.callback_handler import PrintingCallbackHandler
 from strands.models.openai import OpenAIModel
 from strands_tools.a2a_client import A2AClientToolProvider
 
 from common.executor import GenericAgentExecutor
-from common.strands.abstract_agent import AbstractAgent
 from common.types import AgentResponse
-from strands.handlers.callback_handler import PrintingCallbackHandler
+from strands_agents.common.abstract_agent import AbstractAgent
 
 
 class StrandsHostAgent(AbstractAgent):
