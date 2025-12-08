@@ -247,19 +247,19 @@ Located in `google_agents/`:
 
 ## Port Reference
 
-| Component                     | Port | Description |
-|-------------------------------|------|-------------|
-| Web App (FastAPI)             | 9999 | Optional UI layer (via app.py) |
+| Component                     | Port  | Description                                                      |
+|-------------------------------|-------|------------------------------------------------------------------|
+| Web App (FastAPI)             | 9999  | Optional UI layer (via app.py)                                   |
 | Strands Host Agent            | 10000 | StrandsHostAgent orchestrator (via strands_agents/host_agent.py) |
-| Strands User Agent            | 9101 | User information agent |
-| Strands Product Agent         | 9102 | Product information agent |
-| Strands Travel Guide Agent    | 9103 | Travel guide agent (Strands-based) |
-| Google Travel Guide Agent     | 10001 | Travel guide (filters tag: 'guide') |
-| Google Travel Planner Agent   | 10002 | Travel planner (filters tag: 'planner') |
-| Google Travel Assistant Agent | 10000 | Travel assistant (filters tag: 'travel') |
-| User MCP Server               | 9011 | User info tools |
-| Product MCP Server            | 9012 | Product info tools |
-| Travel MCP Server             | 5001 | Travel info tools with Gemini grounding |ㅈ
+| Strands User Agent            | 9101  | User information agent                                           |
+| Strands Product Agent         | 9102  | Product information agent                                        |
+| Strands Travel Guide Agent    | 9103  | Travel guide agent (Strands-based)                               |
+| Google Travel Guide Agent     | 10001 | Travel guide (filters tag: 'guide')                              |
+| Google Travel Planner Agent   | 10002 | Travel planner (filters tag: 'planner')                          |
+| Google Travel Assistant Agent | 10000 | Travel assistant (filters tag: 'travel')                         |
+| User MCP Server               | 9011  | User info tools                                                  |
+| Product MCP Server            | 9012  | Product info tools                                               |
+| Travel MCP Server             | 5001  | Travel info tools with Gemini grounding                          |ㅈ
 
 ## Agent Implementation Patterns
 

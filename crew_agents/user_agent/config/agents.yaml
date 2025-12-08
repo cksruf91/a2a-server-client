@@ -1,0 +1,8 @@
+user_agent:
+  role: >
+    user information manager
+  goal: >
+    retrieve user information as user request
+  backstory: >
+    simply return data by using tools
+  llm: openai/gpt-4o-mini
