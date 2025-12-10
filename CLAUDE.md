@@ -14,6 +14,7 @@ The project consists of four layers:
 2. **Base A2A Agents**: Specialized agents that use MCP tools to handle specific domains
    - Strands-based agents (user, product, travel_guide)
    - Google ADK-based agents (travel guide, planner, assistant)
+   - CrewAI-based agents (user, product, travel_guide, travel_planner)
 3. **Host Agent**: StrandsHostAgent orchestrator that coordinates base agents via A2A protocol
 4. **Web Application** (optional): FastAPI app with chat UI that communicates with Host Agent
 
@@ -29,8 +30,9 @@ The project consists of four layers:
 - `fastmcp`: MCP (Model Context Protocol) server framework
 - `strands-agents`: Agent framework with A2A client and MCP support (used by host agent)
 - `strands-agents-tools[a2a-client]`: A2A client tool provider for orchestration
+- `crewai`: CrewAI framework for multi-agent orchestration (used by crew_agents)
 - `fastapi` + `uvicorn`: Web framework and ASGI server
-- `openai`: LLM integration (GPT-4o-mini for strands-based agents)
+- `openai`: LLM integration (GPT-4o-mini for strands-based and CrewAI agents)
 - `google-adk`: Google Agent Development Kit (for google-based agents)
 - `litellm`: LLM abstraction layer (used with google-adk agents)
 - `nest-asyncio`: Nested asyncio support for compatibility
@@ -54,6 +56,17 @@ a2a-server-client/
 │   │   └── agent.py                   # Travel planner agent (port 10002)
 │   └── travel_assistant_agent/
 │       └── agent.py                   # Travel assistant agent (port 10000)
+├── crew_agents/
+│   ├── common/
+│   │   └── abstract_agent.py          # Base class for CrewAI agents
+│   ├── user_agent/
+│   │   └── crew.py                    # User information agent (port 9101, CrewAI-based)
+│   ├── product_agent/
+│   │   └── crew.py                    # Product information agent (port 9102, CrewAI-based)
+│   ├── travel_guide_agent/
+│   │   └── crew.py                    # Travel guide agent (port 9103, CrewAI-based)
+│   └── travel_planner_agent/
+│       └── crew.py                    # Travel planner agent (port 10002, CrewAI-based)
 ├── mcp/
 │   └── server/
 │       ├── user_mcp_server.py         # User info MCP server (port 9011)
@@ -70,13 +83,16 @@ a2a-server-client/
 │   │   ├── executor.py                # StrandsAgentExecutor for A2A integration
 │   │   └── tool.py                    # ToolServerClient for MCP tool loading
 │   ├── broker.py                      # AgentMessageBroker for A2A communication
+│   ├── executor.py                    # GenericAgentExecutor for all agent types
 │   ├── model.py                       # Request/response models (ChattingRequest, ChatResponse)
+│   ├── types.py                       # Common type definitions (AgentResponse)
 │   └── resource/
 │       └── app/
 │           ├── index.html             # Chat UI frontend
 │           └── app.js                 # Frontend JavaScript
 ├── run_strands_agents.sh              # Script to start strands agents
 ├── run_google_agents.sh               # Script to start google agents
+├── run_crewai_agents.sh               # Script to start CrewAI agents
 ├── run_mcp_server.sh                  # Script to start all MCP servers
 ├── pyproject.toml                     # Project metadata and dependencies
 └── uv.lock                            # Locked dependency versions
@@ -108,7 +124,11 @@ uv sync
 # Terminal 3 - Start Google agents (travel guide, planner, assistant)
 ./run_google_agents.sh
 
-# Terminal 4 - Start web application (optional UI layer)
+# Terminal 4 - Start CrewAI agents (user, product, travel_guide, travel_planner)
+./run_crewai_agents.sh
+# Note: This script starts all four CrewAI agents on ports 9101, 9102, 9103, 10002
+
+# Terminal 5 - Start web application (optional UI layer)
 uv run uvicorn app:main --reload --host 0.0.0.0 --port 9999
 ```
 
@@ -208,6 +228,27 @@ Located in `google_agents/`:
 - Session management via `InMemorySessionService`
 - Bridge to A2A using `GenericAgentExecutor` (`common/google/executor.py`)
 - Streaming responses using `AgentResponse` type
+
+#### CrewAI-based Agents (Ports 9101, 9102, 9103, 10002)
+Located in `crew_agents/`:
+- `user_agent/crew.py` (port 9101): Handles user-related queries using CrewAI with MCP user tools
+  - Connects to user MCP server at `http://127.0.0.1:9011/mcp`
+- `product_agent/crew.py` (port 9102): Handles product-related queries using CrewAI with MCP product tools
+  - Connects to product MCP server at `http://127.0.0.1:9012/mcp`
+- `travel_guide_agent/crew.py` (port 9103): Provides travel guide information using CrewAI
+  - Connects to travel MCP server at `http://127.0.0.1:5001/mcp`
+- `travel_planner_agent/crew.py` (port 10002): Plans travel itineraries using CrewAI
+  - Connects to travel MCP server at `http://127.0.0.1:5001/mcp`
+
+**CrewAI Agent Architecture**:
+- Extend `AbstractAgent` base class (`crew_agents/common/abstract_agent.py`)
+- Use CrewAI `Agent` with GPT-4o-mini model (via `openai/gpt-4o-mini`)
+- Connect to MCP servers via `MCPServerHTTP` with streamable HTTP
+- Each agent defines role, goal, and backstory for task-oriented execution
+- Tool registration via `mcps` parameter in CrewAI Agent
+- Bridge to A2A using `GenericAgentExecutor` (`common/executor.py`)
+- Implement async `stream()` method that yields `AgentResponse` objects
+- Runs as standalone A2A server using `A2AStarletteApplication`
 
 ### Host Agent & Web Application
 

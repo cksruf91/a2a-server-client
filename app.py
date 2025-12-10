@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import nest_asyncio
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
@@ -9,7 +8,6 @@ from fastapi.staticfiles import StaticFiles
 from common.broker import AgentMessageBroker
 from common.model import ChatResponse, ChattingRequest
 
-nest_asyncio.apply()
 chat_router = APIRouter(prefix='/chat', tags=['chat'])
 
 agent_message_broker = AgentMessageBroker(agent_url='http://localhost:10000/')

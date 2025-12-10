@@ -48,6 +48,12 @@ wait_for_port 9102 "CrewAI Product Agent"
 wait_for_port 9103 "CrewAI Travel Guide Agent"
 wait_for_port 10002 "CrewAI Travel Planner Agent"
 
+echo ""
+echo "Starting CrewAI Host Agent (port 10000)..."
+uv run crew_agents/host_agent/crew.py &
+PID_HOST=$!
+
+wait_for_port 10000 "CrewAI Host Agent"
 
 echo ""
 echo "All CrewAI agents are running. Press Ctrl+C to terminate."
@@ -55,6 +61,7 @@ echo "User Agent PID: $PID_USER (port 9101)"
 echo "Product Agent PID: $PID_PRODUCT (port 9102)"
 echo "Travel Guide Agent PID: $PID_TRAVEL_GUIDE (port 9103)"
 echo "Travel Planner Agent PID: $PID_TRAVEL_PLANNER (port 10002)"
+echo "HOST Agent PID: $PID_HOST (port 10000)"
 
 # Wait until processes terminate
 wait
