@@ -1,7 +1,10 @@
 import uuid
+from typing import Type, Any
 
 from a2a.client import A2ACardResolver, ClientFactory, ClientConfig
 from a2a.types import Message, Part, TextPart, Role
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 
 from common.http_context import get_httpx_context
 
@@ -39,3 +42,22 @@ async def call_remote_agent(url: str, message: str) -> str:
                 accumulate_message += _data['content']
 
     return accumulate_message
+
+
+class AgentToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    message: str = Field(..., description="description of the task that agent needs to do")
+
+
+class AgentTool(BaseTool):
+    name: str = "Name of my tool"
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = AgentToolInput
+    max_usage_count: int = 5
+    url: str = Field(..., description="url of the agent")
+
+    def model_post_init(self, __context: Any) -> None:
+        self.description += " example: tool_name(message=\"다낭 관광지 추천해줘\""
+
+    async def _run(self, message: str) -> str:
+        return await call_remote_agent(self.url, message)

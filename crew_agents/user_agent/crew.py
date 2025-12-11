@@ -4,7 +4,7 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentSkill, AgentCard, AgentCapabilities
 from crewai import Agent
-from crewai.mcp import MCPServerHTTP
+from crewai_tools import MCPServerAdapter
 
 from common.executor import GenericAgentExecutor
 from crew_agents.common.abstract_agent import AbstractAgent
@@ -15,23 +15,21 @@ class UserInfoAgent(AbstractAgent):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.agent_name = 'UserInfoCrewAgent'
+        self.mcp_server_params: dict = {
+            "url": "http://127.0.0.1:9011/mcp",
+            "transport": "streamable-http"
+        }
 
     @staticmethod
-    def get_agent() -> Agent:
+    def get_agent(mcp_tools: MCPServerAdapter) -> Agent:
         return Agent(
             role="user information manager",
             goal="retrieve user information as user request",
             backstory="simply return data by using tools",
             llm="openai/gpt-4o-mini",
-            verbose=True,
+            verbose=False,
             reasoning=False,
-            mcps=[
-                MCPServerHTTP(
-                    url="http://127.0.0.1:9011/mcp",
-                    streamable=True,
-                    cache_tools_list=True,
-                )
-            ]
+            tools=mcp_tools,
         )
 
 

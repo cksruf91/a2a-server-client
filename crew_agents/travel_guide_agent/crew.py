@@ -4,7 +4,7 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentSkill, AgentCard, AgentCapabilities
 from crewai import Agent
-from crewai.mcp import MCPServerHTTP
+from crewai_tools import MCPServerAdapter
 
 from common.executor import GenericAgentExecutor
 from crew_agents.common.abstract_agent import AbstractAgent
@@ -15,9 +15,13 @@ class TravelGuideAgent(AbstractAgent):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.agent_name = 'TravelGuideCrewAgent'
+        self.mcp_server_params: dict = {
+            "url": "http://127.0.0.1:5001/mcp",
+            "transport": "streamable-http"
+        }
 
     @staticmethod
-    def get_agent() -> Agent:
+    def get_agent(mcp_tools: MCPServerAdapter) -> Agent:
         return Agent(
             role="travel guide information provider",
             goal="provide travel guide information based on user's request, including place recommendations and detailed information about landmarks",
@@ -25,13 +29,7 @@ class TravelGuideAgent(AbstractAgent):
             llm="openai/gpt-4o-mini",
             verbose=True,
             reasoning=False,
-            mcps=[
-                MCPServerHTTP(
-                    url="http://127.0.0.1:5001/mcp",
-                    streamable=True,
-                    cache_tools_list=True,
-                )
-            ]
+            tools=mcp_tools
         )
 
 

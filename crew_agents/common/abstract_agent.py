@@ -1,22 +1,46 @@
 from abc import ABCMeta, abstractmethod
+from functools import wraps
 from typing import AsyncIterable
 
 from a2a.server.agent_execution import RequestContext
 from crewai import Agent, Crew
 from crewai.types.streaming import StreamChunkType
+from crewai_tools import MCPServerAdapter
 
 from common.types import AgentResponse
+
+
+def with_mcp_context(func):
+    """
+    Decorator that conditionally wraps the stream method with MCPServerAdapter context.
+
+    If self.mcp_server_params is not None, creates MCPServerAdapter context and passes
+    mcp_tools to the decorated method. Otherwise, passes None as mcp_tools.
+    """
+
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        if self.mcp_server_params is not None:
+            with MCPServerAdapter(self.mcp_server_params, connect_timeout=60) as mcp_tools:
+                kwargs['mcp_tools'] = mcp_tools
+                async for item in func(self, *args, **kwargs):
+                    yield item
+        else:
+            async for item in func(self, *args, **kwargs):
+                yield item
+
+    return wrapper
 
 
 class AbstractAgent(metaclass=ABCMeta):
 
     def __init__(self, *args, **kwargs):
-        self.agent = None
         self.agent_name = 'CrewaiAgent'
+        self.mcp_server_params: dict | None = None
 
     @staticmethod
     @abstractmethod
-    def get_agent() -> Agent | Crew:
+    def get_agent(mcp_tools: MCPServerAdapter) -> Agent | Crew:
         ...
 
     @staticmethod
@@ -33,12 +57,14 @@ class AbstractAgent(metaclass=ABCMeta):
         print(f"parsed input : {processed_inputs}")
         return processed_inputs
 
-    async def stream(self, topic: dict | RequestContext) -> AsyncIterable[AgentResponse | str]:
-        if self.agent is None:
-            self.agent = self.get_agent()
+    @with_mcp_context
+    async def stream(self, topic: dict | RequestContext, mcp_tools: MCPServerAdapter = None) -> AsyncIterable[
+        AgentResponse | str]:
+
         topic = self.prepare_inputs(topic)
-        if isinstance(self.agent, Agent):
-            result = self.agent.kickoff(topic['question'])
+        agent = self.get_agent(mcp_tools)
+        if isinstance(agent, Agent):
+            result = await agent.kickoff_async(topic['question'])
             yield AgentResponse(
                 status="stream",
                 message="in progress",
@@ -49,8 +75,8 @@ class AbstractAgent(metaclass=ABCMeta):
                 message="Done",
                 content=".",
             )
-        elif isinstance(self.agent, Crew):
-            streaming = await self.agent.kickoff_async(inputs={"question": topic['question']})
+        elif isinstance(agent, Crew):
+            streaming = await agent.kickoff_async(inputs={"question": topic['question']})
             current_task = ""
             async for chunk in streaming:
                 # Show task transitions
