@@ -36,7 +36,7 @@ class AbstractAgent(metaclass=ABCMeta):
         else:
             user_id = 'unknown'
 
-        print('Running agent {} context_id: {} task_id:{} user_id:{} - query:{}'.format(
+        print('Running agent [{}] context_id: [{}] task_id: [{}] user_id: [{}] - query:{}'.format(
             self.agent_name,
             context.current_task.context_id,
             context.current_task.id,
