@@ -2,7 +2,7 @@ import uuid
 from typing import Type, Any
 
 from a2a.client import A2ACardResolver, ClientFactory, ClientConfig
-from a2a.types import Message, Part, TextPart, Role
+from a2a.types import Message, Part, TextPart, Role, TransportProtocol
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -28,7 +28,7 @@ async def call_remote_agent(url: str, message: str) -> str:
         )
         factory = ClientFactory(
             ClientConfig(
-                supported_transports=["JSONRPC"],
+                supported_transports=[TransportProtocol.jsonrpc],
                 use_client_preference=True,
                 httpx_client=httpx_context,
             )

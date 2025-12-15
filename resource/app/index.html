@@ -596,21 +596,135 @@
         }
 
         .tool-item {
-            padding: 12px;
+            padding: 16px;
             background: #f7f7f8;
-            border-radius: 8px;
-            margin-bottom: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #e0e0e0;
+            transition: box-shadow 0.2s;
+        }
+
+        .tool-item:hover {
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+
+        .tool-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 12px;
         }
 
         .tool-name {
             font-weight: 600;
+            font-size: 16px;
             color: #667eea;
-            margin-bottom: 4px;
+            flex: 1;
+        }
+
+        .tool-server-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
         }
 
         .tool-description {
             font-size: 13px;
             color: #666;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .tool-parameters {
+            margin-top: 12px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .parameters-header {
+            font-weight: 600;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .parameter-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .parameter-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .parameter-header {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+        }
+
+        .parameter-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #333;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+        }
+
+        .parameter-type {
+            background: #e8f0fe;
+            color: #1967d2;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+        }
+
+        .parameter-required {
+            background: #fce8e6;
+            color: #d32f2f;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .parameter-optional {
+            background: #e8f5e9;
+            color: #388e3c;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .parameter-description {
+            font-size: 12px;
+            color: #777;
+            margin-left: 4px;
+            line-height: 1.4;
+            white-space: pre-line;
         }
 
         .error-message {
@@ -654,7 +768,7 @@
         <div class="input-container">
             <div class="input-controls">
                 <div class="mode-toggle">
-                    <button class="mode-btn active" data-mode="normal" onclick="setMode('normal')">Normal</button>
+                    <button class="mode-btn" data-mode="normal" onclick="setMode('normal')">Normal</button>
                     <button class="mode-btn" data-mode="stream" onclick="setMode('stream')">Stream</button>
                 </div>
             </div>

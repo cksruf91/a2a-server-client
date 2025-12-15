@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'http://localhost:9999';
 const COMPLETE_ENDPOINT = '/chat/complete';
 const STREAM_ENDPOINT = '/chat/stream'
 const INIT_MESSAGE = 'Hello! I\'m your AI assistant How can i help you!'
@@ -500,12 +500,41 @@ async function showTools() {
             return;
         }
 
-        toolsList.innerHTML = tools.map(tool => `
-            <div class="tool-item">
-                <div class="tool-name">${tool.name || 'Unnamed Tool'}</div>
-                <div class="tool-description">${tool.description || 'No description available'}</div>
-            </div>
-        `).join('');
+        toolsList.innerHTML = tools.map(tool => {
+            // Parse parameters from inputSchema
+            let parametersHtml = '';
+            if (tool.inputSchema && tool.inputSchema.properties) {
+                const properties = tool.inputSchema.properties;
+                const required = tool.inputSchema.required || [];
+
+                parametersHtml = `
+                    <div class="tool-parameters">
+                        <div class="parameters-header">Parameters:</div>
+                        ${Object.entries(properties).map(([paramName, paramSchema]) => `
+                            <div class="parameter-item">
+                                <div class="parameter-header">
+                                    <span class="parameter-name">${paramName}</span>
+                                    <span class="parameter-type">${paramSchema.type || 'any'}</span>
+                                    ${required.includes(paramName) ? '<span class="parameter-required">required</span>' : '<span class="parameter-optional">optional</span>'}
+                                </div>
+                                ${paramSchema.description ? `<div class="parameter-description">${paramSchema.description}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="tool-item">
+                    <div class="tool-header">
+                        <div class="tool-name">${tool.name || 'Unnamed Tool'}</div>
+                        <div class="tool-server-badge">${tool.server || 'Unknown Server'}</div>
+                    </div>
+                    <div class="tool-description">${tool.description || 'No description available'}</div>
+                    ${parametersHtml}
+                </div>
+            `;
+        }).join('');
     } catch (error) {
         console.error('Error loading tools:', error);
         toolsList.innerHTML = `<div class="error-message">Failed to load tools: ${error.message}</div>`;
@@ -551,6 +580,9 @@ document.getElementById('toolsModal').addEventListener('click', (e) => {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Set mode to match JavaScript state (single source of truth)
+    setMode(currentMode);
+
     // Start with a new session
     startNewChat();
 
