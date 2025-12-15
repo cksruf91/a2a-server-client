@@ -41,6 +41,8 @@ async def call_remote_agent(url: str, message: str) -> str:
                 _data = artifact.parts[0].root.data
                 accumulate_message += _data['content']
 
+    print(f"[Agent Tool result] | {accumulate_message}")
+
     return accumulate_message
 
 
@@ -53,7 +55,7 @@ class AgentTool(BaseTool):
     name: str = "Name of my tool"
     description: str = "What this tool does. It's vital for effective utilization."
     args_schema: Type[BaseModel] = AgentToolInput
-    max_usage_count: int = 5
+    max_usage_count: int = 1
     url: str = Field(..., description="url of the agent")
 
     def model_post_init(self, __context: Any) -> None:

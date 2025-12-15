@@ -31,7 +31,7 @@ class TravelPlannerAgent(AbstractAgent):
             Always respond in the same language that the user asked the question in.
             If the user doesn't provide sufficient information to use the tool, ask for the necessary information.""",
             llm="openai/gpt-4o-mini",
-            verbose=True,
+            verbose=False,
             reasoning=False,
             tools=mcp_tools
         )

@@ -27,7 +27,7 @@ class TravelGuideAgent(AbstractAgent):
             goal="provide travel guide information based on user's request, including place recommendations and detailed information about landmarks",
             backstory="expert travel guide who helps travelers discover amazing places and provides detailed information about tourist attractions",
             llm="openai/gpt-4o-mini",
-            verbose=True,
+            verbose=False,
             reasoning=False,
             tools=mcp_tools
         )

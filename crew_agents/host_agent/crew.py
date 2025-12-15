@@ -34,7 +34,7 @@ class HostAgent(AbstractAgent):
             goal="Help users find information by coordinating with specialized agents",
             backstory=backstory,
             llm="openai/gpt-5-mini",
-            verbose=True,
+            verbose=False,
             reasoning=False,
             max_reasoning_attempts=3,
             tools=[
@@ -51,7 +51,7 @@ class HostAgent(AbstractAgent):
                 AgentTool(
                     name="call_travel_guide_agent",
                     description="call travel guide agent with message",
-                    url="http://localhost:9103/"
+                    url="http://localhost:10001/"
                 ),
                 AgentTool(
                     name="call_travel_planner_agent",

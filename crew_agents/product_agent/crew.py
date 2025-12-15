@@ -27,7 +27,7 @@ class ProductInfoAgent(AbstractAgent):
             goal="provide product information based on user's request",
             backstory="retrieve and provide product information using available tools",
             llm="openai/gpt-4o-mini",
-            verbose=True,
+            verbose=False,
             reasoning=False,
             tools=mcp_tools
         )
