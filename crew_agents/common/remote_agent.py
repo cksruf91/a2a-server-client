@@ -47,8 +47,13 @@ async def call_remote_agent(url: str, message: str) -> str:
 
 
 class AgentToolInput(BaseModel):
-    """Input schema for MyCustomTool."""
+    """Input schema for AgentTool."""
     message: str = Field(..., description="description of the task that agent needs to do")
+
+
+class AgentToolResponse(BaseModel):
+    """Output schema for AgentTool."""
+    answer: str = Field(..., description="answer to the task")
 
 
 class AgentTool(BaseTool):
@@ -59,7 +64,12 @@ class AgentTool(BaseTool):
     url: str = Field(..., description="url of the agent")
 
     def model_post_init(self, __context: Any) -> None:
-        self.description += " example: tool_name(message=\"다낭 관광지 추천해줘\""
+        self.description += (
+            "\narg: {\"message\": \"some message...\"}"
+            "\nexample: tool_name(message=\"some message...\")"
+        )
 
-    async def _run(self, message: str) -> str:
-        return await call_remote_agent(self.url, message)
+    async def _run(self, message: str) -> AgentToolResponse:
+        return AgentToolResponse(
+            answer=await call_remote_agent(self.url, message)
+        )

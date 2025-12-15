@@ -25,7 +25,7 @@ class ProductInfoAgent(AbstractAgent):
         return Agent(
             role="product information manager",
             goal="provide product information based on user's request",
-            backstory="retrieve and provide product information using available tools",
+            backstory="retrieve and provide product information using available tools, Input question: {question}",
             llm="openai/gpt-4o-mini",
             verbose=False,
             reasoning=False,

@@ -28,14 +28,19 @@ class HostAgent(AbstractAgent):
         2. Always respond in the same language that the user asked the question in.
         3. Check available agents and delegate tasks appropriately based on user requirements.
         4. If there are no appropriate tools available, respond to user questions directly.
+        5. If you need additional information to complete task, go back to user and ask it
+        
+        Input question: {question}
+        Previous conversation: {conversion_history}
         """
         host_agent = Agent(
             role="AI agent coordinator",
             goal="Help users find information by coordinating with specialized agents",
             backstory=backstory,
-            llm="openai/gpt-5-mini",
-            verbose=False,
+            llm="openai/gpt-4o-mini",
+            verbose=True,
             reasoning=False,
+            max_iter=1,
             max_reasoning_attempts=3,
             tools=[
                 AgentTool(

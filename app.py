@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from common.broker import AgentMessageBroker
-from common.model import ChatResponse, ChattingRequest
+from common.model import ChattingRequest
 
 chat_router = APIRouter(prefix='/chat', tags=['chat'])
 
@@ -14,10 +14,12 @@ agent_message_broker = AgentMessageBroker(agent_url='http://localhost:10000/')
 
 
 @chat_router.post('/complete')
-async def get_chatting_message(request: ChattingRequest) -> ChatResponse:
+async def get_chatting_message(request: ChattingRequest) -> StreamingResponse:
     global agent_message_broker
-    output = await agent_message_broker.complete(request)
-    return ChatResponse(roomId=request.roomId, message=output)
+    return StreamingResponse(
+        agent_message_broker.stream(request),
+        media_type="text/event-stream"
+    )
 
 
 @chat_router.post('/stream')

@@ -25,7 +25,7 @@ class UserInfoAgent(AbstractAgent):
         return Agent(
             role="user information manager",
             goal="retrieve user information as user request",
-            backstory="simply return data by using tools",
+            backstory="simply return data by using tools, Input question: {question}",
             llm="openai/gpt-4o-mini",
             verbose=False,
             reasoning=False,

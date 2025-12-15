@@ -29,7 +29,10 @@ class TravelPlannerAgent(AbstractAgent):
             You assist with destination selection, itinerary planning, and provide recommendations for transportation and accommodations.
             Your goal is to create personalized travel plans that consider the user's preferences and constraints while optimizing their travel experience.
             Always respond in the same language that the user asked the question in.
-            If the user doesn't provide sufficient information to use the tool, ask for the necessary information.""",
+            If the user doesn't provide sufficient information to use the tool, ask for the necessary information.
+
+            Input question: {question}
+            """,
             llm="openai/gpt-4o-mini",
             verbose=False,
             reasoning=False,

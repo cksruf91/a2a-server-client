@@ -5,6 +5,7 @@ from typing import AsyncIterable
 from a2a.server.agent_execution import RequestContext
 from crewai import Agent, Crew
 from crewai.types.streaming import StreamChunkType
+from crewai.utilities.types import LLMMessage
 from crewai_tools import MCPServerAdapter
 
 from common.types import AgentResponse
@@ -44,13 +45,27 @@ class AbstractAgent(metaclass=ABCMeta):
         ...
 
     @staticmethod
-    def prepare_inputs(inputs: RequestContext) -> dict:
-        processed_inputs = {}
+    def prepare_inputs(inputs: RequestContext) -> list[LLMMessage]:
+        processed_inputs: list[LLMMessage] = []
+
+        a2a_message = inputs.message
+        if getattr(a2a_message, "metadata", None) is not None:
+            history = a2a_message.metadata.get("history", [])
+            for role, message in history:
+                processed_inputs.append(
+                    LLMMessage(role=role, content=message)
+                )
+
         if isinstance(inputs, RequestContext):
             question = inputs.get_user_input()
-            processed_inputs.update({"question": question})
+            processed_inputs.append(LLMMessage(role="user", content=question))
         elif isinstance(inputs, dict):
-            processed_inputs.update(inputs)
+            processed_inputs.append(
+                LLMMessage(
+                    role=inputs.get("role", "user"),  # noqa
+                    content=inputs.get("content"),
+                )
+            )
         else:
             raise TypeError("inputs must be a RequestContext or dict, but got {}".format(type(inputs)))
 
@@ -64,7 +79,7 @@ class AbstractAgent(metaclass=ABCMeta):
         topic = self.prepare_inputs(topic)
         agent = self.get_agent(mcp_tools)
         if isinstance(agent, Agent):
-            result = await agent.kickoff_async(topic['question'])
+            result = await agent.kickoff_async(messages=topic)
             yield AgentResponse(
                 status="stream",
                 message="in progress",

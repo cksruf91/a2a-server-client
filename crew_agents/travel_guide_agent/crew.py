@@ -25,7 +25,10 @@ class TravelGuideAgent(AbstractAgent):
         return Agent(
             role="travel guide information provider",
             goal="provide travel guide information based on user's request, including place recommendations and detailed information about landmarks",
-            backstory="expert travel guide who helps travelers discover amazing places and provides detailed information about tourist attractions",
+            backstory=(
+                "expert travel guide who helps travelers discover amazing places and provides detailed information about tourist attractions, "
+                "Input question: {question}"
+            ),
             llm="openai/gpt-4o-mini",
             verbose=False,
             reasoning=False,
