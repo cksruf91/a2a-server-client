@@ -41,12 +41,12 @@ class HostAgent(AbstractAgent):
                 AgentTool(
                     name="call_user_agent",
                     description="call user information agent with message",
-                    url="http://localhost:9101/"
+                    url="http://localhost:10003/"
                 ),
                 AgentTool(
                     name="call_prod_info_agent",
                     description="call product information agent with message",
-                    url="http://localhost:9102/"
+                    url="http://localhost:10004/"
                 ),
                 AgentTool(
                     name="call_travel_guide_agent",

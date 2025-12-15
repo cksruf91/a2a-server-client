@@ -1,9 +1,9 @@
-const API_BASE_URL = 'http://localhost:9001';
+const API_BASE_URL = 'http://localhost:8080';
 const COMPLETE_ENDPOINT = '/chat/complete';
 const STREAM_ENDPOINT = '/chat/stream'
 const INIT_MESSAGE = 'Hello! I\'m your AI assistant How can i help you!'
 const DEFAULT_USER_ID = 'FB0CD4'; // Default user ID
-let currentMode = 'normal';
+let currentMode = 'stream';
 let roomId = 'test-room-' + Date.now();
 let userId = DEFAULT_USER_ID; // Initialize with default user ID
 let chatHistory = []; // Store chat history as [["user", "message"], ["assistant", "response"]]
@@ -66,7 +66,7 @@ function loadSession(sessionId) {
     currentSessionId = sessionId;
     roomId = session.roomId;
     chatHistory = session.chatHistory || [];
-    currentMode = session.mode || 'normal';
+    currentMode = session.mode || 'stream';
 
     // Restore chat container
     const container = document.getElementById('chatContainer');

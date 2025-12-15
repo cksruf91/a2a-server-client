@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Handle Ctrl+C signal
-trap 'echo -e "\nShutting down all agents..."; kill $PID_USER $PID_PRODUCT $PID_TRAVEL_GUIDE $PID_TRAVEL_PLANNER 2>/dev/null; exit 0' SIGINT
+trap 'echo -e "\nShutting down all agents..."; kill $PID_HOST $PID_USER $PID_PRODUCT $PID_TRAVEL_GUIDE $PID_TRAVEL_PLANNER 2>/dev/null; exit 0' SIGINT
 
 # Function to wait for a port to be ready
 wait_for_port() {
@@ -23,17 +23,17 @@ wait_for_port() {
     return 0
 }
 
-echo "Starting CrewAI User Agent (port 9101)..."
+echo "Starting CrewAI User Agent (port 10003)..."
 uv run crew_agents/user_agent/crew.py &
 PID_USER=$!
 
 echo ""
-echo "Starting CrewAI Product Agent (port 9102)..."
+echo "Starting CrewAI Product Agent (port 10004)..."
 uv run crew_agents/product_agent/crew.py &
 PID_PRODUCT=$!
 
 echo ""
-echo "Starting CrewAI Travel Guide Agent (port 9103)..."
+echo "Starting CrewAI Travel Guide Agent (port 10001)..."
 uv run crew_agents/travel_guide_agent/crew.py &
 PID_TRAVEL_GUIDE=$!
 
@@ -43,9 +43,9 @@ uv run crew_agents/travel_planner_agent/crew.py &
 PID_TRAVEL_PLANNER=$!
 
 # Wait for agent to be ready
-wait_for_port 9101 "CrewAI User Agent"
-wait_for_port 9102 "CrewAI Product Agent"
-wait_for_port 9103 "CrewAI Travel Guide Agent"
+wait_for_port 10003 "CrewAI User Agent"
+wait_for_port 10004 "CrewAI Product Agent"
+wait_for_port 10001 "CrewAI Travel Guide Agent"
 wait_for_port 10002 "CrewAI Travel Planner Agent"
 
 echo ""
@@ -57,9 +57,9 @@ wait_for_port 10000 "CrewAI Host Agent"
 
 echo ""
 echo "All CrewAI agents are running. Press Ctrl+C to terminate."
-echo "User Agent PID: $PID_USER (port 9101)"
-echo "Product Agent PID: $PID_PRODUCT (port 9102)"
-echo "Travel Guide Agent PID: $PID_TRAVEL_GUIDE (port 9103)"
+echo "User Agent PID: $PID_USER (port 10003)"
+echo "Product Agent PID: $PID_PRODUCT (port 10004)"
+echo "Travel Guide Agent PID: $PID_TRAVEL_GUIDE (port 10001)"
 echo "Travel Planner Agent PID: $PID_TRAVEL_PLANNER (port 10002)"
 echo "HOST Agent PID: $PID_HOST (port 10000)"
 

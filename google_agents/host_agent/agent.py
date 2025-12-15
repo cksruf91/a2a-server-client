@@ -100,7 +100,7 @@ class GoogleADKHostAgent(AbstractAgent):
 
 if __name__ == "__main__":
     public_agent_card = AgentCard(
-        name="travel assistant agent",
+        name="Host Agent",
         description="travel assistant agent",
         url='http://localhost:10000/',
         version='1.0.0',

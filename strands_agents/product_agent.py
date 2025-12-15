@@ -52,7 +52,7 @@ if __name__ == "__main__":
     public_agent_card = AgentCard(
         name="Product Information Agent",
         description="this agent can control and access product information like name, price, description etc..",
-        url='http://localhost:9102/',
+        url='http://localhost:10004/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -82,4 +82,4 @@ if __name__ == "__main__":
         # extended_agent_card=specific_extended_agent_card,
     )
 
-    uvicorn.run(server.build(), host='0.0.0.0', port=9102)
+    uvicorn.run(server.build(), host='0.0.0.0', port=10004)

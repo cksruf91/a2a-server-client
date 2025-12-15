@@ -37,7 +37,7 @@ if __name__ == "__main__":  # noqa
     agent_card = AgentCard(
         name="User Information Agent",
         description="this agent can control and access user information like name, address, etc..",
-        url='http://localhost:9101/',
+        url='http://localhost:10003/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -85,4 +85,4 @@ if __name__ == "__main__":  # noqa
         # extended_agent_card=specific_extended_agent_card,
     )
 
-    uvicorn.run(server.build(), host='0.0.0.0', port=9101)
+    uvicorn.run(server.build(), host='0.0.0.0', port=10003)

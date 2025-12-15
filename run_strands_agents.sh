@@ -23,27 +23,27 @@ wait_for_port() {
     return 0
 }
 
-echo "Starting User Agent (port 9101)..."
+echo "Starting User Agent (port 10003)..."
 uv run strands_agents/user_agent.py &
 PID_BETA=$!
 
-echo "Starting Product Agent (port 9102)..."
+echo "Starting Product Agent (port 10004)..."
 uv run strands_agents/product_agent.py &
 PID_GAMMA=$!
 
-echo "Starting Travel Guide Agent (port 9103)..."
+echo "Starting Travel Guide Agent (port 10001)..."
 uv run strands_agents/travel_guide_agent.py &
 PID_DELTA=$!
 
-echo "Starting Travel Planner Agent (port 9104)..."
+echo "Starting Travel Planner Agent (port 10002)..."
 uv run strands_agents/travel_planner_agent.py &
 PID_EPSILON=$!
 
 # Wait for all four agents to be ready
-wait_for_port 9101 "User Agent"
-wait_for_port 9102 "Product Agent"
-wait_for_port 9103 "Travel Guide Agent"
-wait_for_port 9104 "Travel Planner Agent"
+wait_for_port 10003 "User Agent"
+wait_for_port 10004 "Product Agent"
+wait_for_port 10001 "Travel Guide Agent"
+wait_for_port 10002 "Travel Planner Agent"
 
 echo ""
 echo "All base agents are ready. Starting Host Agent..."

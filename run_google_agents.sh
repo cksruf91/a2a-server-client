@@ -11,8 +11,8 @@ echo "Starting agent 2 (port 10002)..."
 uv run google_agents/travel_planner_agent/agent.py &
 PID_GAMMA=$!
 
-echo "Starting agent 3 (port 10000)..."
-uv run google_agents/travel_assistant_agent/agent.py &
+echo "Starting Host Agent (port 10000)..."
+uv run google_agents/host_agent/agent.py &
 PID_ALPHA=$!
 
 echo "all Agent are running. Press Ctrl+C to terminate."

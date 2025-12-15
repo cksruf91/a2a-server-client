@@ -51,7 +51,7 @@ if __name__ == "__main__":
     public_agent_card = AgentCard(
         name="Travel Planner Agent",
         description="this agent can create and modify travel itineraries with day-by-day plans, time schedules, and accommodation recommendations",
-        url='http://localhost:9104/',
+        url='http://localhost:10002/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -94,4 +94,4 @@ if __name__ == "__main__":
         # extended_agent_card=specific_extended_agent_card,
     )
 
-    uvicorn.run(server.build(), host='0.0.0.0', port=9104)
+    uvicorn.run(server.build(), host='0.0.0.0', port=10002)

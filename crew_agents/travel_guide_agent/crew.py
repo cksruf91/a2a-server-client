@@ -37,7 +37,7 @@ if __name__ == "__main__":  # noqa
     agent_card = AgentCard(
         name="Travel Guide Agent",
         description="this agent can provide travel guide information including place recommendations and detailed information about landmarks and tourist attractions",
-        url='http://localhost:9103/',
+        url='http://localhost:10001/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -80,4 +80,4 @@ if __name__ == "__main__":  # noqa
         # extended_agent_card=specific_extended_agent_card,
     )
 
-    uvicorn.run(server.build(), host='0.0.0.0', port=9103)
+    uvicorn.run(server.build(), host='0.0.0.0', port=10001)

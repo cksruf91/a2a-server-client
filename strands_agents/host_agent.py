@@ -24,10 +24,10 @@ from strands_agents.common.abstract_agent import AbstractAgent
 
 class StrandsHostAgent(AbstractAgent):
     AGENT_URLS = {
-        "http://localhost:9101/": "user_agent",
-        "http://localhost:9102/": "product_agent",
-        "http://localhost:9103/": "travel_guide_agent",
-        "http://localhost:9104/": "travel_planner_agent",
+        "http://localhost:10003/": "user_agent",
+        "http://localhost:10004/": "product_agent",
+        "http://localhost:10001/": "travel_guide_agent",
+        "http://localhost:10002/": "travel_planner_agent",
     }
     _prompt = yaml.safe_load(
         Path('strands_agents').joinpath('resource').joinpath('prompt.yaml').open('r')

@@ -44,9 +44,10 @@ a2a-server-client/
 ├── app.py                             # FastAPI web app (UI layer, port 9999)
 ├── strands_agents/
 │   ├── host_agent.py                  # StrandsHostAgent orchestrator (port 10000)
-│   ├── user_agent.py                  # User information agent (port 9101)
-│   ├── product_agent.py               # Product information agent (port 9102)
-│   ├── travel_guide_agent.py          # Travel guide agent (port 9103, Strands-based)
+│   ├── user_agent.py                  # User information agent (port 10003)
+│   ├── product_agent.py               # Product information agent (port 10004)
+│   ├── travel_guide_agent.py          # Travel guide agent (port 10001, Strands-based)
+│   ├── travel_planner_agent.py        # Travel planner agent (port 10002, Strands-based)
 │   └── resource/
 │       └── prompt.yaml                # System prompts for agents (Korean)
 ├── google_agents/
@@ -55,16 +56,16 @@ a2a-server-client/
 │   ├── travel_planner_agent/
 │   │   └── agent.py                   # Travel planner agent (port 10002)
 │   └── travel_assistant_agent/
-│       └── agent.py                   # Travel assistant agent (port 10000)
+│       └── agent.py                   # Host Agent (port 10000)
 ├── crew_agents/
 │   ├── common/
 │   │   └── abstract_agent.py          # Base class for CrewAI agents
 │   ├── user_agent/
-│   │   └── crew.py                    # User information agent (port 9101, CrewAI-based)
+│   │   └── crew.py                    # User information agent (port 10003, CrewAI-based)
 │   ├── product_agent/
-│   │   └── crew.py                    # Product information agent (port 9102, CrewAI-based)
+│   │   └── crew.py                    # Product information agent (port 10004, CrewAI-based)
 │   ├── travel_guide_agent/
-│   │   └── crew.py                    # Travel guide agent (port 9103, CrewAI-based)
+│   │   └── crew.py                    # Travel guide agent (port 10001, CrewAI-based)
 │   └── travel_planner_agent/
 │       └── crew.py                    # Travel planner agent (port 10002, CrewAI-based)
 ├── mcp/
@@ -126,7 +127,7 @@ uv sync
 
 # Terminal 4 - Start CrewAI agents (user, product, travel_guide, travel_planner)
 ./run_crewai_agents.sh
-# Note: This script starts all four CrewAI agents on ports 9101, 9102, 9103, 10002
+# Note: This script starts all four CrewAI agents on ports 10003, 10004, 10001, 10002
 
 # Terminal 5 - Start web application (optional UI layer)
 uv run uvicorn app:main --reload --host 0.0.0.0 --port 9999
@@ -160,12 +161,13 @@ uv run uvicorn app:main --reload --host 0.0.0.0 --port 9999
 
 - Web UI (optional): http://localhost:9999 or http://localhost:9999/index
 - Strands Host Agent (A2A orchestrator): http://localhost:10000
-- Strands User Agent (A2A): http://localhost:9101
-- Strands Product Agent (A2A): http://localhost:9102
-- Strands Travel Guide Agent (A2A): http://localhost:9103
+- Strands User Agent (A2A): http://localhost:10003
+- Strands Product Agent (A2A): http://localhost:10004
+- Strands Travel Guide Agent (A2A): http://localhost:10001
+- Strands Travel Planner Agent (A2A): http://localhost:10002
 - Google Travel Guide Agent (A2A): http://localhost:10001
 - Google Travel Planner Agent (A2A): http://localhost:10002
-- Google Travel Assistant Agent (A2A): http://localhost:10000
+- Google Host Agent (A2A): http://localhost:10000
 
 ### Dependency Management
 ```bash
@@ -198,13 +200,15 @@ uv pip list
 
 ### A2A Agents
 
-#### Strands-based Agents (Ports 9101-9103)
+#### Strands-based Agents (Ports 10003, 10004, 10001, 10002)
 Located in `strands_agents/`:
-- `user_agent.py` (port 9101): Handles user-related queries using MCP user tools
+- `user_agent.py` (port 10003): Handles user-related queries using MCP user tools
   - Connects to user MCP server at `http://localhost:9011/mcp`
-- `product_agent.py` (port 9102): Handles product-related queries using MCP product tools
+- `product_agent.py` (port 10004): Handles product-related queries using MCP product tools
   - Connects to product MCP server at `http://localhost:9012/mcp`
-- `travel_guide_agent.py` (port 9103): Provides travel guide information (Strands-based alternative to Google ADK version)
+- `travel_guide_agent.py` (port 10001): Provides travel guide information (Strands-based alternative to Google ADK version)
+  - Connects to travel MCP server at `http://localhost:5001/mcp`
+- `travel_planner_agent.py` (port 10002): Plans travel itineraries (Strands-based alternative to Google ADK version)
   - Connects to travel MCP server at `http://localhost:5001/mcp`
 - All extend custom `AbstractAgent` from `common/strands/abstract_agent.py`
 - Use `ToolServerClient` to connect to MCP servers via streamable HTTP
@@ -216,7 +220,7 @@ Located in `google_agents/`:
   - Filters tools by tag: `'guide'`
 - `travel_planner_agent/agent.py` (port 10002): Plans travel itineraries
   - Filters tools by tag: `'planner'`
-- `travel_assistant_agent/agent.py` (port 10000): General travel assistance
+- `travel_assistant_agent/agent.py` (port 10000): Host Agent for general travel assistance
   - Filters tools by tag: `'travel'`
 
 **Google ADK Agent Architecture**:
@@ -229,13 +233,13 @@ Located in `google_agents/`:
 - Bridge to A2A using `GenericAgentExecutor` (`common/google/executor.py`)
 - Streaming responses using `AgentResponse` type
 
-#### CrewAI-based Agents (Ports 9101, 9102, 9103, 10002)
+#### CrewAI-based Agents (Ports 10003, 10004, 10001, 10002)
 Located in `crew_agents/`:
-- `user_agent/crew.py` (port 9101): Handles user-related queries using CrewAI with MCP user tools
+- `user_agent/crew.py` (port 10003): Handles user-related queries using CrewAI with MCP user tools
   - Connects to user MCP server at `http://127.0.0.1:9011/mcp`
-- `product_agent/crew.py` (port 9102): Handles product-related queries using CrewAI with MCP product tools
+- `product_agent/crew.py` (port 10004): Handles product-related queries using CrewAI with MCP product tools
   - Connects to product MCP server at `http://127.0.0.1:9012/mcp`
-- `travel_guide_agent/crew.py` (port 9103): Provides travel guide information using CrewAI
+- `travel_guide_agent/crew.py` (port 10001): Provides travel guide information using CrewAI
   - Connects to travel MCP server at `http://127.0.0.1:5001/mcp`
 - `travel_planner_agent/crew.py` (port 10002): Plans travel itineraries using CrewAI
   - Connects to travel MCP server at `http://127.0.0.1:5001/mcp`
@@ -255,7 +259,7 @@ Located in `crew_agents/`:
 - `strands_agents/host_agent.py`: StrandsHostAgent implementation (port 10000)
   - Orchestrates A2A agents using strands-agents framework
   - Uses `A2AClientToolProvider` for agent communication
-  - Configured to connect to agents at ports 9101, 9102, and 9103 (Strands agents only)
+  - Configured to connect to agents at ports 10003, 10004, 10001, and 10002 (Strands agents only)
   - Runs as standalone A2A server via `A2AStarletteApplication`
   - Loads system prompts from `strands_agents/resource/prompt.yaml`
   - Implements `StrandsAgentExecutor` for task execution
@@ -292,15 +296,20 @@ Located in `crew_agents/`:
 |-------------------------------|-------|------------------------------------------------------------------|
 | Web App (FastAPI)             | 9999  | Optional UI layer (via app.py)                                   |
 | Strands Host Agent            | 10000 | StrandsHostAgent orchestrator (via strands_agents/host_agent.py) |
-| Strands User Agent            | 9101  | User information agent                                           |
-| Strands Product Agent         | 9102  | Product information agent                                        |
-| Strands Travel Guide Agent    | 9103  | Travel guide agent (Strands-based)                               |
+| Strands User Agent            | 10003 | User information agent                                           |
+| Strands Product Agent         | 10004 | Product information agent                                        |
+| Strands Travel Guide Agent    | 10001 | Travel guide agent (Strands-based)                               |
+| Strands Travel Planner Agent  | 10002 | Travel planner agent (Strands-based)                             |
 | Google Travel Guide Agent     | 10001 | Travel guide (filters tag: 'guide')                              |
 | Google Travel Planner Agent   | 10002 | Travel planner (filters tag: 'planner')                          |
-| Google Travel Assistant Agent | 10000 | Travel assistant (filters tag: 'travel')                         |
+| Google Host Agent             | 10000 | Host Agent (filters tag: 'travel')                               |
+| CrewAI User Agent             | 10003 | User information agent (CrewAI-based)                            |
+| CrewAI Product Agent          | 10004 | Product information agent (CrewAI-based)                         |
+| CrewAI Travel Guide Agent     | 10001 | Travel guide agent (CrewAI-based)                                |
+| CrewAI Travel Planner Agent   | 10002 | Travel planner agent (CrewAI-based)                              |
 | User MCP Server               | 9011  | User info tools                                                  |
 | Product MCP Server            | 9012  | Product info tools                                               |
-| Travel MCP Server             | 5001  | Travel info tools with Gemini grounding                          |ㅈ
+| Travel MCP Server             | 5001  | Travel info tools with Gemini grounding                          |
 
 ## Agent Implementation Patterns
 
@@ -337,7 +346,8 @@ Pattern used in all agents under `google_agents/`:
 ### Architecture Notes
 - **Agent Communication**: Agents communicate via A2A protocol over HTTP
 - **Tool Provision**: Tools are provided via MCP (Model Context Protocol) servers
-- **Host Agent Limitation**: StrandsHostAgent currently only connects to Strands agents (ports 9101, 9102, 9103), not Google ADK agents
+- **Host Agent Limitation**: StrandsHostAgent currently only connects to Strands agents (ports 10003, 10004, 10001, 10002), not Google ADK agents
+- **Port Sharing**: Note that Travel Guide agents (Strands/Google/CrewAI) share port 10001, and Travel Planner agents (Strands/Google/CrewAI) share port 10002. Only one framework's agents should be running at a time to avoid port conflicts
 - **MCP Tool Tagging**: Tools in travel MCP server are tagged (`'guide'`, `'planner'`, `'travel'`) for selective loading by different agents
 - **System Prompts**: Defined in `strands_agents/resource/prompt.yaml` (Korean language)
 - **Two-Layer Architecture**:
