@@ -1,14 +1,16 @@
 import asyncio
 import datetime
+import json
 import uuid
 from abc import abstractmethod, ABCMeta
 from typing import AsyncIterable
 
 from a2a.server.agent_execution import RequestContext
+from google.adk.artifacts import InMemoryArtifactService
 from google.adk.events import Event
+from google.adk.memory import InMemoryMemoryService
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
-from google.adk.sessions import Session
+from google.adk.sessions import InMemorySessionService, Session
 from google.genai import types
 
 from common.types import AgentResponse
@@ -19,6 +21,8 @@ class AbstractAgent(metaclass=ABCMeta):
         self.agent = None
         self.runner: Runner | None = None
         self.agent_name = "default_agent_name"
+        self.artifact_service = InMemoryArtifactService()
+        self.memory_service = InMemoryMemoryService()
         self.session_service = InMemorySessionService()
 
     @abstractmethod
@@ -73,7 +77,10 @@ class AbstractAgent(metaclass=ABCMeta):
                 if event.content and event.content.parts:
                     for part in event.content.parts:
                         if part.text:
-                            response += part.text + "\n"
+                            try:
+                                response += str(json.loads(part.text).get("content")) + "\n"
+                            except json.decoder.JSONDecodeError:
+                                response += part.text + "\n"
                         elif part.function_response:
                             response += part.function_response.model_dump_json() + "\n"
                 else:
