@@ -2,7 +2,7 @@ from abc import abstractmethod, ABCMeta
 from typing import AsyncIterable
 
 from a2a.server.agent_execution import RequestContext
-from langchain_core.messages import HumanMessage, ToolMessage, AIMessage
+from langchain_core.messages import HumanMessage, ToolMessage, AIMessage, BaseMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from common.types import AgentResponse
@@ -11,21 +11,35 @@ from common.types import AgentResponse
 class AbstractAgent(metaclass=ABCMeta):
 
     def __init__(self):
-        self.agent = None
         self.agent_name = "default agent name"
 
     @abstractmethod
-    async def get_agent(self) -> CompiledStateGraph:
+    async def get_agent(self, user_info: dict = None) -> CompiledStateGraph:
         ...
 
-    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
-        query = context.get_user_input()
-        if self.agent is None:
-            self.agent = await self.get_agent()
+    @staticmethod
+    def _parse_message(context: RequestContext) -> list[BaseMessage]:
+        messages = []
+        if getattr(context.message, "metadata", None) is not None:
+            history = context.message.metadata.get("history", [])
+            for role, message in history:
+                messages.append(
+                    HumanMessage(content=message) if role == "user" else AIMessage(content=message)
+                )
+        messages.append(HumanMessage(context.get_user_input()))
+        return messages
 
-        result = self.agent.astream(
+    async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
+
+        user_id = None
+        if context.message.metadata is not None:
+            user_id = context.message.metadata.get('userId', 'unknown')
+        agent = await self.get_agent({"user_id": user_id})
+
+        messages = self._parse_message(context)
+        result = agent.astream(
             input={  # type: ignore
-                "messages": [HumanMessage(query)]
+                "messages": messages
             },
             stream_mode="updates",
             subgraphs=True,

@@ -13,19 +13,19 @@ from common.executor import GenericAgentExecutor
 from langchain_agents.common.abstract_agent import AbstractAgent
 
 
-class UserInfoAgent(AbstractAgent):
+class TravelGuideAgent(AbstractAgent):
 
     def __init__(self):
         super().__init__()
         self.agent = None
-        self.agent_name = 'user_agent'
+        self.agent_name = 'travel_guide_agent'
 
     async def get_agent(self, user_info: dict = None) -> CompiledStateGraph:
         mcp_client = MultiServerMCPClient(
             {
-                "user_tools": {
+                "travel_tools": {
                     "transport": "http",
-                    "url": "http://localhost:9011/mcp",
+                    "url": "http://localhost:5001/mcp",
                 }
             }
         )
@@ -40,16 +40,16 @@ class UserInfoAgent(AbstractAgent):
             ),
             tools=await mcp_client.get_tools(),
             system_prompt=SystemMessage(
-                content="provide user information based on user's request "
+                content="provide travel guide information based on user's request, including place recommendations and detailed information about landmarks"
             )
         )
 
 
 if __name__ == "__main__":
     public_agent_card = AgentCard(
-        name="User Information Agent",
-        description="this agent can control and access user information like name, address, etc..",
-        url='http://localhost:10003/',
+        name="Travel Guide Agent",
+        description="this agent can provide travel guide information including place recommendations and detailed information about landmarks and tourist attractions",
+        url='http://localhost:10001/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -57,37 +57,32 @@ if __name__ == "__main__":
         supports_authenticated_extended_card=False,
         skills=[
             AgentSkill(
-                id="user_name_skill",
-                name="get_user_name_skill",
-                description="get user name by id",
-                tags=["User"],
+                id="place_recommendation_skill",
+                name="get_place_recommendation_skill",
+                description="get place recommendations for a city or country, optionally filtered by theme (restaurant, tourist, cafe, shopping, nature)",
+                tags=["Travel", "Guide"],
                 examples=[
-                    "plz tell me name of user id \'K1234\'"
+                    "recommend tourist attractions in Paris",
+                    "show me popular restaurants in Seoul",
+                    "what are the best cafes in Tokyo"
                 ],
             ),
             AgentSkill(
-                id="user_address_skill",
-                name="get_user_address_skill",
-                description="get user address by id",
-                tags=["User"],
+                id="place_information_skill",
+                name="get_place_information_skill",
+                description="get detailed information about a specific landmark or place",
+                tags=["Travel", "Guide"],
                 examples=[
-                    "plz tell me address of user id \'K1234\'"
+                    "tell me about the Eiffel Tower",
+                    "what are the opening hours of the Louvre Museum",
+                    "give me information about Gyeongbokgung Palace"
                 ],
             ),
-            AgentSkill(
-                id="user_booked_item_skill",
-                name="get_user_booked_item_skill",
-                description="get user booked item by user id",
-                tags=["User"],
-                examples=[
-                    "plz tell me booked item of user id \'K1234\'",
-                ],
-            )
         ],
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=GenericAgentExecutor(UserInfoAgent()),
+        agent_executor=GenericAgentExecutor(TravelGuideAgent()),
         task_store=InMemoryTaskStore(),
     )
 
@@ -97,4 +92,4 @@ if __name__ == "__main__":
         # extended_agent_card=specific_extended_agent_card,
     )
 
-    uvicorn.run(server.build(), host='0.0.0.0', port=10003)
+    uvicorn.run(server.build(), host='0.0.0.0', port=10001)

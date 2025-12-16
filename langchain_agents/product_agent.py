@@ -13,19 +13,19 @@ from common.executor import GenericAgentExecutor
 from langchain_agents.common.abstract_agent import AbstractAgent
 
 
-class UserInfoAgent(AbstractAgent):
+class ProductInfoAgent(AbstractAgent):
 
     def __init__(self):
         super().__init__()
         self.agent = None
-        self.agent_name = 'user_agent'
+        self.agent_name = 'product_agent'
 
     async def get_agent(self, user_info: dict = None) -> CompiledStateGraph:
         mcp_client = MultiServerMCPClient(
             {
-                "user_tools": {
+                "product_tools": {
                     "transport": "http",
-                    "url": "http://localhost:9011/mcp",
+                    "url": "http://localhost:9012/mcp",
                 }
             }
         )
@@ -40,16 +40,16 @@ class UserInfoAgent(AbstractAgent):
             ),
             tools=await mcp_client.get_tools(),
             system_prompt=SystemMessage(
-                content="provide user information based on user's request "
+                content="provide product information based on user's request"
             )
         )
 
 
 if __name__ == "__main__":
     public_agent_card = AgentCard(
-        name="User Information Agent",
-        description="this agent can control and access user information like name, address, etc..",
-        url='http://localhost:10003/',
+        name="Product Information Agent",
+        description="this agent can control and access product information like name, price, description etc..",
+        url='http://localhost:10004/',
         version='1.0.0',
         default_input_modes=['text'],
         default_output_modes=['text'],
@@ -57,37 +57,19 @@ if __name__ == "__main__":
         supports_authenticated_extended_card=False,
         skills=[
             AgentSkill(
-                id="user_name_skill",
-                name="get_user_name_skill",
-                description="get user name by id",
-                tags=["User"],
+                id="product_info_skill",
+                name="get_product_info_skill",
+                description="get product information by id",
+                tags=["Product"],
                 examples=[
-                    "plz tell me name of user id \'K1234\'"
-                ],
-            ),
-            AgentSkill(
-                id="user_address_skill",
-                name="get_user_address_skill",
-                description="get user address by id",
-                tags=["User"],
-                examples=[
-                    "plz tell me address of user id \'K1234\'"
-                ],
-            ),
-            AgentSkill(
-                id="user_booked_item_skill",
-                name="get_user_booked_item_skill",
-                description="get user booked item by user id",
-                tags=["User"],
-                examples=[
-                    "plz tell me booked item of user id \'K1234\'",
+                    "tell me product name of id 'PDO1234'",
                 ],
             )
         ],
     )
 
     request_handler = DefaultRequestHandler(
-        agent_executor=GenericAgentExecutor(UserInfoAgent()),
+        agent_executor=GenericAgentExecutor(ProductInfoAgent()),
         task_store=InMemoryTaskStore(),
     )
 
@@ -97,4 +79,4 @@ if __name__ == "__main__":
         # extended_agent_card=specific_extended_agent_card,
     )
 
-    uvicorn.run(server.build(), host='0.0.0.0', port=10003)
+    uvicorn.run(server.build(), host='0.0.0.0', port=10004)

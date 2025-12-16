@@ -1,7 +1,7 @@
 import uuid
 
 from a2a.client import A2ACardResolver, ClientFactory, ClientConfig
-from a2a.types import Message, Part, TextPart, Role, TransportProtocol
+from a2a.types import Message, Part, TextPart, Role, TransportProtocol, Artifact
 
 from common.http_context import get_httpx_context
 
