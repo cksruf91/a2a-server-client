@@ -5,12 +5,12 @@ from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentSkill, AgentCapabilities, AgentCard
 from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage
-from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
 from langgraph.graph.state import CompiledStateGraph
 
 from common.executor import GenericAgentExecutor
 from langchain_agents.common.abstract_agent import AbstractAgent
+from langchain_agents.common.tool import MCPServerClient
 
 
 class TravelPlannerAgent(AbstractAgent):
@@ -21,13 +21,14 @@ class TravelPlannerAgent(AbstractAgent):
         self.agent_name = 'travel_planner_agent'
 
     async def get_agent(self, user_info: dict = None) -> CompiledStateGraph:
-        mcp_client = MultiServerMCPClient(
+        mcp_client = MCPServerClient(
             {
                 "travel_tools": {
                     "transport": "http",
                     "url": "http://localhost:5001/mcp",
                 }
-            }
+            },
+            tags=['planner']
         )
 
         return create_agent(
