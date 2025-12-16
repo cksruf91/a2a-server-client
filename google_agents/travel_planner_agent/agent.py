@@ -29,7 +29,7 @@ class TravelPlannerAgent(AbstractAgent):
         self.agent_name = 'travel_planner_agent'
         self.session_service = InMemorySessionService()
 
-    async def init_agent_runner(self):
+    async def init_agent_runner(self, user_info: dict = None):
         tools = await McpToolset(
             connection_params=StreamableHTTPConnectionParams(
                 url="http://localhost:5001/mcp", timeout=2.0

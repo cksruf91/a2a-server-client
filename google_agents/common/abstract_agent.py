@@ -22,7 +22,7 @@ class AbstractAgent(metaclass=ABCMeta):
         self.session_service = InMemorySessionService()
 
     @abstractmethod
-    async def init_agent_runner(self):
+    async def init_agent_runner(self, user_info: dict = None):
         ...
 
     async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:
@@ -31,10 +31,9 @@ class AbstractAgent(metaclass=ABCMeta):
         Yields AgentResponse
         """
         query = context.get_user_input()
+        user_id = 'unknown'
         if context.message.metadata is not None:
-            user_id = context.message.metadata.get('userId', 'unknown')
-        else:
-            user_id = 'unknown'
+            user_id = context.message.metadata.get('userId', user_id)
 
         print('Running agent [{}] context_id: [{}] task_id: [{}] user_id: [{}] - query:{}'.format(
             self.agent_name,
@@ -47,7 +46,7 @@ class AbstractAgent(metaclass=ABCMeta):
             raise ValueError('Query cannot be empty')
 
         if not self.runner:
-            await self.init_agent_runner()
+            await self.init_agent_runner(user_info={"user_id": user_id})
 
         session = await self._manage_session(user_id=user_id, session_id=context.current_task.context_id)
 

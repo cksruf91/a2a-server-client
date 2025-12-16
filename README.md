@@ -1,7 +1,8 @@
 A2A-Server-Client
 -----------------
 
-A2A(Agent-to-Agent) 프로토콜 기반 멀티 에이전트 시스템. MCP(Model Context Protocol)를 통해 도메인별 도구를 제공하고, Strands/Google ADK/CrewAI/LangChain 기반
+A2A(Agent-to-Agent) 프로토콜 기반 멀티 에이전트 시스템. MCP(Model Context Protocol)를 통해 도메인별 도구를 제공하고, Strands/Google
+ADK/CrewAI/LangChain 기반
 에이전트들이 협업하여 사용자 요청을 처리합니다.
 
 # Project Structure
@@ -40,6 +41,10 @@ a2a-server-client/
 │   │   └── tool.py                         # ToolFilter (태그 기반 도구 필터링)
 │   ├── host_agent/
 │   │   └── agent.py                        # Host Agent (port 10000)
+│   ├── user_agent/
+│   │   └── agent.py                        # User Agent (port 10003)
+│   ├── product_agent/
+│   │   └── agent.py                        # Product Agent (port 10004)
 │   ├── travel_guide_agent/
 │   │   └── agent.py                        # Travel Guide Agent (port 10001)
 │   └── travel_planner_agent/
@@ -84,7 +89,7 @@ The project consists of four layers:
 1. MCP 서버들: 도메인별 도구 제공 (사용자/제품/여행 정보)
 2. A2A 에이전트: MCP 도구를 사용하여 특정 도메인을 처리하는 특화된 에이전트
     * Strands 기반 에이전트 (사용자, 제품, 여행_가이드, 여행_플래너)
-    * Google ADK 기반 에이전트 (여행 가이드, 플래너, 어시스턴트)
+    * Google ADK 기반 에이전트 (사용자, 제품, 여행_가이드, 여행_플래너, 호스트)
     * CrewAI 기반 에이전트 (사용자, 제품, 여행_가이드, 여행_플래너)
     * LangChain 기반 에이전트 (사용자, 제품, 여행_가이드, 여행_플래너)
 3. 호스트 에이전트: A2A 프로토콜을 통해 기본 에이전트들을 조율하는 오케스트레이터 에이전트
@@ -147,11 +152,13 @@ GOOGLE_API_KEY=your_google_api_key  # 또는 GOOGLE_GENAI_API_KEY
 
 ### 서버 리스트
 
-| 서버명                           | IP        | Port  | 역할                        |
-|-------------------------------|-----------|-------|---------------------------|
-| Travel Guide Agent            | localhost | 10001 | 관광지 정보 제공 (tag: 'guide')  |
-| Travel Planner Agent          | localhost | 10002 | 여행 일정 계획 (tag: 'planner') |
-| Travel Assistant Agent (Host) | localhost | 10000 | 여행 전반 지원 (tag: 'travel')  |
+| 서버명                  | IP        | Port  | 역할                          |
+|----------------------|-----------|-------|-----------------------------|
+| Host Agent           | localhost | 10000 | A2A 오케스트레이터 (Google ADK 기반) |
+| User Agent           | localhost | 10003 | 사용자 정보 처리                   |
+| Product Agent        | localhost | 10004 | 제품 정보 처리                    |
+| Travel Guide Agent   | localhost | 10001 | 관광지 정보 제공 (tag: 'guide')    |
+| Travel Planner Agent | localhost | 10002 | 여행 일정 계획 (tag: 'planner')   |
 
 ## Strands Agents
 
