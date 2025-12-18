@@ -1,10 +1,8 @@
 import asyncio
-from pathlib import Path
 from typing import AsyncIterable
 
 import httpx
 import uvicorn
-import yaml
 from a2a.client import A2ACardResolver
 from a2a.server.agent_execution import RequestContext
 from a2a.server.apps import A2AStarletteApplication
@@ -29,11 +27,6 @@ class StrandsHostAgent(AbstractAgent):
         "http://localhost:10001/": "travel_guide_agent",
         "http://localhost:10002/": "travel_planner_agent",
     }
-    _prompt = yaml.safe_load(
-        Path('strands_agents').joinpath('resource').joinpath('prompt.yaml').open('r')
-    )
-
-    host_system_prompt: str = _prompt.get('a2a').get('host').get('system')
 
     def __init__(self):
         super().__init__()
@@ -46,22 +39,36 @@ class StrandsHostAgent(AbstractAgent):
             window_size=10,
         )
         cards = [card.model_dump_json() for card in await self.get_agent_cards()]
-        model = OpenAIModel(
-            model_id="gpt-4o-mini",
-            params={
-                "temperature": 0.1,
-            }
+        sys_prompt = """
+        당신은 사용자 정보와 상품 정보를 찾는 것을 도와주는 에이전트 입니다. 다음의 agent 를 사용하여 사용자의 질문에 답변하세요
+        <AgentCards>
+        {agent_card}
+        </AgentCards>
+        
+        다음은 사용자에 대한 정보입니다.
+        <userInformation>
+        {user_info}
+        </userInformation>
+        
+        <instruction>
+        markdown 포멧을 활용하여 답변하세요
+        </instruction>
+        """.format(
+            agent_card=cards,
+            user_info={"userId": user_id}
         )
         return Agent(
-            model=model,
+            model=OpenAIModel(
+                model_id="gpt-4o-mini",
+                params={
+                    "temperature": 0.1,
+                }
+            ),
             name=self.name,
             tools=provider.tools,
             conversation_manager=conversation_manager,
             callback_handler=PrintingCallbackHandler(),
-            system_prompt=self.host_system_prompt.format(
-                agent_card=cards,
-                user_info={"userId": user_id}
-            )
+            system_prompt=sys_prompt
         )
 
     async def stream(self, context: RequestContext) -> AsyncIterable[AgentResponse]:

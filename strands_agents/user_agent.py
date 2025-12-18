@@ -25,14 +25,13 @@ class UserInfoAgent(AbstractAgent):
         self.mcp_server_url = "http://localhost:9011/mcp"
 
     async def get_agent(self, tool_client: ToolServerClient) -> Agent:
-        model = OpenAIModel(
-            model_id="gpt-4o-mini",
-            params={
-                "temperature": 0.1,
-            }
-        )
         return Agent(
-            model=model,
+            model=OpenAIModel(
+                model_id="gpt-4o-mini",
+                params={
+                    "temperature": 0.1,
+                }
+            ),
             name=self.name,
             tools=tool_client.list_tools(),
             tool_executor=ConcurrentToolExecutor(),
