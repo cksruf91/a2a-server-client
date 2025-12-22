@@ -91,7 +91,10 @@ class AbstractAgent(metaclass=ABCMeta):
                 content=".",
             )
         elif isinstance(agent, Crew):
-            streaming = await agent.kickoff_async(inputs={"question": topic['question']})
+            streaming = await agent.kickoff_async(inputs={
+                "question": topic[0],
+                "conversion_history": topic,
+            })
             current_task = ""
             async for chunk in streaming:
                 # Show task transitions

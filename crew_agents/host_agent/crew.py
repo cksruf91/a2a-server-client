@@ -3,7 +3,7 @@ from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentSkill, AgentCard, AgentCapabilities
-from crewai import Agent
+from crewai import Agent, Task, Crew
 
 from common.executor import GenericAgentExecutor
 from crew_agents.common.abstract_agent import AbstractAgent
@@ -17,7 +17,7 @@ class HostAgent(AbstractAgent):
         self.agent_name = 'HostAgent'
 
     @staticmethod
-    def get_agent(mcp_tools) -> Agent:
+    def get_agent(mcp_tools) -> Crew:
         backstory = """
         You are an AI agent helping users with their needs.
         handling User, Product & Travel information
@@ -74,8 +74,21 @@ class HostAgent(AbstractAgent):
             #     )
             # ],
         )
+        main_task = Task(
+            description="사용자 질문에 적절한 답변을 합니다. question={question}",
+            expected_output="사용자 질문에 대한 완성된 답변",
+            agent=host_agent,
+        )
 
-        return host_agent
+        return Crew(
+            agents=[host_agent],
+            tasks=[main_task],
+            verbose=True,
+            stream=True,
+            memory=True
+        )
+
+        # return host_agent
 
 
 if __name__ == "__main__":  # noqa
