@@ -9,6 +9,7 @@ from google.adk.apps.app import App
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.planners import BuiltInPlanner
 from google.adk.runners import Runner
+from google.adk.tools import AgentTool
 from google.genai import types
 from google.genai.types import ThinkingConfig
 
@@ -90,12 +91,18 @@ class GoogleADKHostAgent(AbstractAgent):
             model=LiteLlm(model="openai/gpt-4o-mini"),
             name="travel_assistant_agent",
             instruction=instruction,
-            sub_agents=[
-                user_agent,
-                product_agent,
-                travel_guide_agent,
-                travel_planner_agent
+            tools=[
+                AgentTool(user_agent),
+                AgentTool(product_agent),
+                AgentTool(travel_guide_agent),
+                AgentTool(travel_planner_agent),
             ],
+            # sub_agents=[
+            #     user_agent,
+            #     product_agent,
+            #     travel_guide_agent,
+            #     travel_planner_agent
+            # ],
             generate_content_config=types.GenerateContentConfig(
                 temperature=0.0,
                 safety_settings=[
